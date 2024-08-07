@@ -8,6 +8,7 @@ import buildImg from './images/build.png'
 import cowAMM from './images/cowAMM.png'
 import curveImg from './images/curve.svg'
 import daiImg from './images/dai.svg'
+import { PRE_EXIT_BAL_POOL } from './dapps/BalV2HookApp'
 
 const FAKE_URL = 'https://google.com'
 
@@ -86,10 +87,10 @@ const POST_BUILD: HookDappIframe = {
 const POST_HOOK_DAPPS_ALL = [POST_BRIDGE, POST_MAKER, POST_BUILD]
 
 export const PRE_HOOK_REGISTRY: Record<SupportedChainId, HookDapp[]> = {
-  [SupportedChainId.MAINNET]: [PRE_CURVE, PRE_COWAMM, PRE_MAKER, PRE_BUILD],
-  [SupportedChainId.GNOSIS_CHAIN]: [PRE_CLAIM_GNO, PRE_CURVE, PRE_COWAMM, PRE_MAKER, PRE_BUILD],
-  [SupportedChainId.SEPOLIA]: [PRE_COWAMM, PRE_BUILD],
-  [SupportedChainId.ARBITRUM_ONE]: [PRE_COWAMM, PRE_BUILD],
+  [SupportedChainId.MAINNET]: [PRE_CURVE, PRE_COWAMM, PRE_MAKER, PRE_BUILD, PRE_EXIT_BAL_POOL],
+  [SupportedChainId.GNOSIS_CHAIN]: [PRE_CLAIM_GNO, PRE_CURVE, PRE_COWAMM, PRE_MAKER, PRE_BUILD, PRE_EXIT_BAL_POOL],
+  [SupportedChainId.SEPOLIA]: [PRE_COWAMM, PRE_BUILD, PRE_EXIT_BAL_POOL],
+  [SupportedChainId.ARBITRUM_ONE]: [PRE_COWAMM, PRE_BUILD, PRE_EXIT_BAL_POOL],
 }
 
 export const POST_HOOK_REGISTRY: Record<SupportedChainId, HookDapp[]> = {
