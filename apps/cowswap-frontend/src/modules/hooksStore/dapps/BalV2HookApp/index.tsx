@@ -4,17 +4,18 @@ import { RPC_URLS } from '@cowprotocol/common-const'
 import { HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary, UI } from '@cowprotocol/ui'
 
-import { RemoveLiquidity, RemoveLiquidityKind } from '@balancer/sdk'
+import { RemoveLiquidity, RemoveLiquidityKind, Slippage } from '@balancer/sdk'
 import { parseUnits } from 'ethers/lib/utils'
 import styled from 'styled-components/macro'
 
-import { HookDappContext } from '../../context'
-import balancerLogo from '../../images/balancer.png'
 import { usePoolData, useUserBalancerPool } from 'modules/hooksStore/hooks/useBalancerPool'
 import { PoolData, PoolsData } from 'modules/hooksStore/types/BalancerPool'
 
-const TITLE = 'Exit Balancer V2 Pool'
-const DESCRIPTION = 'Allows you to exit a Balancer V2 pool'
+import { HookDappContext } from '../../context'
+import balancerLogo from '../../images/balancer.png'
+
+const TITLE = 'Exit Balancer Pool'
+const DESCRIPTION = 'Allows you to exit a Balancer pool'
 
 const Wrapper = styled.div`
   display: flex;
@@ -141,51 +142,45 @@ export const PRE_EXIT_BAL_POOL: HookDappInternal = {
 export function ExitBalV2App() {
   const hookDappContext = useContext(HookDappContext)
   const { data: pools, isLoading: isLoadingPools } = useUserBalancerPool()
-  const { data: poolData, isValidating: isValidatingPoolData, mutate: mutatePoolData } = usePoolData()
+  const [selectedPoolId, setSelectedPoolId] = useState<string>()
+  const { data: poolData, isValidating: isValidatingPoolData } = usePoolData(selectedPoolId)
 
   const clickOnAddHook = useCallback(async () => {
-    if (!hookDappContext || !selectedPool || !hookDappContext.account) return
+    if (!hookDappContext || !poolData || !hookDappContext.account) return
 
     const removeLiquidity = new RemoveLiquidity()
 
-    const exitInfo = await removeLiquidity.query(
+    const exitQuery = await removeLiquidity.query(
       {
         chainId: hookDappContext.chainId,
         kind: RemoveLiquidityKind.Proportional,
         rpcUrl: RPC_URLS[hookDappContext.chainId],
         bptIn: {
-          address: selectedPool.address,
-          decimals: selectedPool.decimals,
-          rawAmount: parseUnits(selectedPool.userBalance.totalBalance, selectedPool.decimals).toBigInt(),
+          address: poolData.address,
+          decimals: poolData.decimals,
+          rawAmount: parseUnits(poolData.userBalance.totalBalance, poolData.decimals).toBigInt(),
         },
       },
       {
-        id: selectedPool.id,
-        address: selectedPool.address,
-        type: selectedPool.type,
-        protocolVersion: selectedPool.protocolVersion,
-        tokens: selectedPool.displayTokens.map((token, index) => ({
+        id: poolData.id,
+        address: poolData.address,
+        type: poolData.type.charAt(0).toUpperCase() + poolData.type.slice(1).toLowerCase(),
+        protocolVersion: poolData.protocolVersion,
+        tokens: poolData.poolTokens.map((token, index) => ({
           ...token,
           index,
         })),
       }
     )
 
-    // const exitPool = removeLiquidity.buildCall({
-    //   poolType: selectedPool.type,
-    //   poolId: selectedPool.id,
-    //   removeLiquidityKind: RemoveLiquidityKind.Proportional,
-    //   bptIn: TokenAmount.fromHumanAmount(
-    //     new Token(hookDappContext.chainId, selectedPool.address, selectedPool.decimals),
-    //     selectedPool.userBalance.totalBalance
-    //   ),
-    //   slippage: Slippage.fromPercentage('0.05'),
-    //   chainId: hookDappContext.chainId,
-    //   protocolVersion: selectedPool.protocolVersion,
-    //   amountsOut: [],
-    // })
+    const exitCalldata = removeLiquidity.buildCall({
+      ...exitQuery,
+      slippage: Slippage.fromPercentage('0.05'),
+      sender: hookDappContext.account as `0x${string}`,
+      recipient: hookDappContext.account as `0x${string}`,
+    })
 
-    console.log({ exitInfo })
+    console.log({ exitCalldata })
   }, [poolData, hookDappContext])
 
   if (!hookDappContext?.account) {
@@ -203,13 +198,18 @@ export function ExitBalV2App() {
         <p>{DESCRIPTION}</p>
       </Header>
       <ContentWrapper>
-        <SelectPoolToExit loading={isLoadingPools} pools={pools} poolData={poolData} mutatePoolData={mutatePoolData} />
+        {poolData && (
+          <ButtonPrimary onClick={clickOnAddHook} disabled={isValidatingPoolData}>
+            +Add Pre-hook
+          </ButtonPrimary>
+        )}
+        <SelectPoolToExit
+          loading={isLoadingPools}
+          pools={pools}
+          poolData={poolData}
+          setSelectedPoolId={setSelectedPoolId}
+        />
       </ContentWrapper>
-      {poolData && (
-        <ButtonPrimary onClick={clickOnAddHook} disabled={isValidatingPoolData}>
-          +Add Pre-hook
-        </ButtonPrimary>
-      )}
 
       <Link
         onClick={(e) => {
@@ -226,10 +226,10 @@ export function ExitBalV2App() {
 export function SelectPoolToExit(props: {
   loading: boolean
   pools?: PoolsData[]
-  mutatePoolData: (pool: PoolData) => void
+  setSelectedPoolId: (poolId: string) => void
   poolData?: PoolData
 }) {
-  const { loading, pools, mutatePoolData, poolData } = props
+  const { loading, pools, setSelectedPoolId, poolData } = props
   const [isOpen, setIsOpen] = useState(false)
 
   if (loading) {
@@ -240,8 +240,8 @@ export function SelectPoolToExit(props: {
     return <ErrorLabel>None pool found</ErrorLabel>
   }
 
-  const handleSelect = (pool: PoolData) => {
-    mutatePoolData(pool)
+  const handleSelect = (pool: PoolsData) => {
+    setSelectedPoolId(pool.id)
     setIsOpen(false)
   }
 

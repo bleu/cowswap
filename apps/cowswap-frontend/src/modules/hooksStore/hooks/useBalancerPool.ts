@@ -103,19 +103,17 @@ export function useUserBalancerPool() {
 export function usePoolData(poolId?: string) {
   const { chainId, account } = useWalletInfo()
 
-  return useSWR([chainId, account], async ([chainId, account]) => {
-    if (!account || !chainId || !poolId) {
-      return []
+  return useSWR(poolId, async (poolId) => {
+    if (!poolId) {
+      return undefined
     }
-    const chainName = BalancerChainName[chainId]
+
     return await GQL_CLIENT.request<{
       pool: PoolData
     }>(POOL_QUERY, {
-      where: {
-        id: poolId,
-        userAddress: account,
-        chainIn: [chainName],
-      },
+      id: poolId,
+      chain: BalancerChainName[chainId],
+      userAddress: account,
     }).then((result) => {
       return result.pool
     })
