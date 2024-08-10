@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
 
 import { RPC_URLS } from '@cowprotocol/common-const'
 import { HookDappInternal, HookDappType } from '@cowprotocol/types'
@@ -13,86 +13,39 @@ import { PoolData, PoolsData } from 'modules/hooksStore/types/BalancerPool'
 
 import { HookDappContext } from '../../context'
 import balancerLogo from '../../images/balancer.png'
+import { ICall } from 'modules/hooksStore/cow-shed'
+import { useUserTransactionTTL } from 'legacy/state/user/hooks'
+import { CurrencyAmount, Token } from '@uniswap/sdk-core'
+import { useTokenContract } from 'common/hooks/useContract'
+import { useCowShed } from 'modules/hooksStore/hooks/useCowShed'
 
 const TITLE = 'Exit Balancer Pool'
 const DESCRIPTION = 'Allows you to exit a Balancer pool'
 
 const Wrapper = styled.div`
   display: flex;
-  flex-flow: column wrap;
-
-  flex-grow: 1;
-`
-
-const Link = styled.button`
-  border: none;
-  padding: 0;
-  text-decoration: underline;
-  display: text;
-  cursor: pointer;
-  background: none;
-  color: white;
-  margin: 10px 0;
-`
-
-const Header = styled.div`
-  display: flex;
-  padding: 1.5em;
-
-  p {
-    padding: 0 1em;
-  }
-`
-
-const ContentWrapper = styled.div`
-  flex-grow: 1;
-  justify-content: center;
-  align-items: center;
-  flex-flow: column wrap;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  padding: 1em;
-  text-align: center;
+  flex-direction: row;
+  gap: 1.6rem;
+  padding: 1rem;
+  justify-content: start;
 `
 
 const DropdownContainer = styled.div`
   position: relative;
-  width: 100%;
+  width: 50%;
   margin: 1.4rem 0;
 `
 
 const DropdownHeader = styled.div`
-  padding: 0;
+  padding: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 1.3rem;
   font-weight: 500;
-
-  > img {
-    --size: 1.6rem;
-    width: var(--size);
-    height: var(--size);
-  }
-
-  > b {
-    display: flex;
-    flex-flow: row wrap;
-    gap: 0.3rem;
-  }
-
-  > b::after {
-    --size: 1rem;
-    content: '';
-    width: var(--size);
-    height: var(--size);
-    display: inline-block;
-    background: url(/images/icons/carret-down.svg) no-repeat center / contain;
-  }
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
 `
 
 const DropdownBody = styled.div`
@@ -144,44 +97,97 @@ export function ExitBalV2App() {
   const { data: pools, isLoading: isLoadingPools } = useUserBalancerPool()
   const [selectedPoolId, setSelectedPoolId] = useState<string>()
   const { data: poolData, isValidating: isValidatingPoolData } = usePoolData(selectedPoolId)
+  const [userDeadline] = useUserTransactionTTL()
+  const { signCalls, calculateProxyAddress } = useCowShed()
+  const bptContract = useTokenContract(poolData?.address)
+  const [hookCalls, setHookCalls] = useState<ICall[]>()
+  const [outputTokens, setOutputTokens] = useState<CurrencyAmount<Token>[]>()
+
+  useEffect(() => {
+    const updateHookData = async () => {
+      if (!hookDappContext || !poolData || !hookDappContext.account) return
+
+      const removeLiquidity = new RemoveLiquidity()
+
+      const bptAmount = parseUnits(poolData.userBalance.totalBalance, poolData.decimals).toBigInt()
+      const proxyAddress = calculateProxyAddress(hookDappContext.account) as `0x${string}`
+
+      const exitQuery = await removeLiquidity.query(
+        {
+          chainId: hookDappContext.chainId,
+          kind: RemoveLiquidityKind.Proportional,
+          rpcUrl: RPC_URLS[hookDappContext.chainId],
+          bptIn: {
+            address: poolData.address,
+            decimals: poolData.decimals,
+            rawAmount: bptAmount,
+          },
+        },
+        {
+          id: poolData.id,
+          address: poolData.address,
+          type: poolData.type.charAt(0).toUpperCase() + poolData.type.slice(1).toLowerCase(),
+          protocolVersion: poolData.protocolVersion,
+          tokens: poolData.poolTokens.map((token, index) => ({
+            ...token,
+            index,
+          })),
+        }
+      )
+      const exitCall = removeLiquidity.buildCall({
+        ...exitQuery,
+        slippage: Slippage.fromPercentage('10'),
+        sender: proxyAddress,
+        recipient: hookDappContext.account as `0x${string}`,
+      })
+      setHookCalls([
+        {
+          target: poolData.address,
+          isDelegateCall: false,
+          value: BigInt(0),
+          allowFailure: false,
+          callData: bptContract?.interface.encodeFunctionData('transferFrom', [
+            hookDappContext.account,
+            proxyAddress,
+            bptAmount,
+          ]) as string,
+        },
+        {
+          target: exitCall.to,
+          isDelegateCall: false,
+          value: exitCall.value,
+          allowFailure: false,
+          callData: exitCall.callData,
+        },
+      ])
+      setOutputTokens(
+        exitQuery.amountsOut.map((amount) =>
+          CurrencyAmount.fromRawAmount(
+            new Token(hookDappContext.chainId, amount.token.address, amount.token.decimals, amount.token.symbol),
+            amount.amount.toString()
+          )
+        )
+      )
+    }
+
+    updateHookData()
+  }, [poolData, hookDappContext])
 
   const clickOnAddHook = useCallback(async () => {
-    if (!hookDappContext || !poolData || !hookDappContext.account) return
+    if (!hookCalls || !hookDappContext) return
+    const validTo = BigInt(Date.now() + userDeadline * 2)
 
-    const removeLiquidity = new RemoveLiquidity()
+    const hook = await signCalls(hookCalls, validTo)
 
-    const exitQuery = await removeLiquidity.query(
+    hookDappContext.addHook(
       {
-        chainId: hookDappContext.chainId,
-        kind: RemoveLiquidityKind.Proportional,
-        rpcUrl: RPC_URLS[hookDappContext.chainId],
-        bptIn: {
-          address: poolData.address,
-          decimals: poolData.decimals,
-          rawAmount: parseUnits(poolData.userBalance.totalBalance, poolData.decimals).toBigInt(),
-        },
+        hook,
+        dapp: PRE_EXIT_BAL_POOL,
+        outputTokens,
       },
-      {
-        id: poolData.id,
-        address: poolData.address,
-        type: poolData.type.charAt(0).toUpperCase() + poolData.type.slice(1).toLowerCase(),
-        protocolVersion: poolData.protocolVersion,
-        tokens: poolData.poolTokens.map((token, index) => ({
-          ...token,
-          index,
-        })),
-      }
+      true
     )
-
-    const exitCalldata = removeLiquidity.buildCall({
-      ...exitQuery,
-      slippage: Slippage.fromPercentage('0.05'),
-      sender: hookDappContext.account as `0x${string}`,
-      recipient: hookDappContext.account as `0x${string}`,
-    })
-
-    console.log({ exitCalldata })
-  }, [poolData, hookDappContext])
+  }, [hookCalls, userDeadline, hookDappContext, signCalls, outputTokens])
 
   if (!hookDappContext?.account) {
     return 'Connect your wallet first'
@@ -193,32 +199,15 @@ export function ExitBalV2App() {
 
   return (
     <Wrapper>
-      <Header>
-        <img src={balancerLogo} alt={TITLE} width="60" />
-        <p>{DESCRIPTION}</p>
-      </Header>
-      <ContentWrapper>
-        {poolData && (
-          <ButtonPrimary onClick={clickOnAddHook} disabled={isValidatingPoolData}>
-            +Add Pre-hook
-          </ButtonPrimary>
-        )}
-        <SelectPoolToExit
-          loading={isLoadingPools}
-          pools={pools}
-          poolData={poolData}
-          setSelectedPoolId={setSelectedPoolId}
-        />
-      </ContentWrapper>
-
-      <Link
-        onClick={(e) => {
-          e.preventDefault()
-          hookDappContext.close()
-        }}
-      >
-        Close
-      </Link>
+      <SelectPoolToExit
+        loading={isLoadingPools}
+        pools={pools}
+        poolData={poolData}
+        setSelectedPoolId={setSelectedPoolId}
+      />
+      <ButtonPrimary onClick={clickOnAddHook} disabled={isValidatingPoolData || !poolData} width={'50%'}>
+        +Add Pre-hook
+      </ButtonPrimary>
     </Wrapper>
   )
 }
@@ -246,21 +235,19 @@ export function SelectPoolToExit(props: {
   }
 
   return (
-    <>
-      <DropdownContainer>
-        <DropdownHeader onClick={() => setIsOpen(!isOpen)}>
-          <b>{poolData ? poolData.symbol : 'Select the pool to exit'}</b>
-        </DropdownHeader>
-        {isOpen && (
-          <DropdownBody>
-            {pools.map((pool) => (
-              <DropdownOption onClick={() => handleSelect(pool)} key={pool.id}>
-                {pool.symbol}
-              </DropdownOption>
-            ))}
-          </DropdownBody>
-        )}
-      </DropdownContainer>
-    </>
+    <DropdownContainer>
+      <DropdownHeader onClick={() => setIsOpen(!isOpen)}>
+        <b>{poolData ? poolData.symbol : 'Select the pool to exit'}</b>
+      </DropdownHeader>
+      {isOpen && (
+        <DropdownBody>
+          {pools.map((pool) => (
+            <DropdownOption onClick={() => handleSelect(pool)} key={pool.id}>
+              {pool.symbol}
+            </DropdownOption>
+          ))}
+        </DropdownBody>
+      )}
+    </DropdownContainer>
   )
 }
