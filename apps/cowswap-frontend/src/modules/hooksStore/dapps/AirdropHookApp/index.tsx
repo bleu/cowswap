@@ -1,9 +1,10 @@
-import { useCallback, useContext, useState } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
 
 import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { HookDappContext } from '../../context'
 
 import { AIRDROP_OPTIONS } from './constants'
+import { usePreviewClaimableTokens } from './hooks/usePreviewClaimableTokens'
 
 import { ButtonPrimary } from '@cowprotocol/ui'
 import ICON_ARROW_DOWN from '@cowprotocol/assets/images/carret-down.svg'
@@ -14,6 +15,8 @@ import { Header } from './components/Header'
 import { ContentWrapper } from './components/ContentWrapper'
 import { Row } from './components/Row'
 import { Link } from './components/Link'
+
+type ClaimableAmount = string | undefined
 
 const NAME = 'Airdrop'
 const DESCRIPTION = 'Claim an aidrop before swapping!'
@@ -29,15 +32,6 @@ export const PRE_AIRDROP: HookDappInternal = {
     version: '0.1.0',
   }
 
-const airdrops = [
-    {
-        name:"COW",
-    },
-    {
-        name:"OTHER"
-    },
-]
-
 export function AirdropHookApp() {
   const hookDappContext = useContext(HookDappContext)
   const [hook, setHook] = useState<CowHook>({
@@ -48,6 +42,15 @@ export function AirdropHookApp() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedAirdrop, setSelectedAirdrop] = useState({})
   const [dropDownText, setDropDownText] = useState("Select your airdrop")
+  const [claimableAmount, setClaimableAmount ] = useState<ClaimableAmount>(undefined)
+  const previewClaimableTokens = usePreviewClaimableTokens()
+  const link = AIRDROP_OPTIONS[0].link
+  const address = "0xa90914762709441d557De208bAcE1edB1A3968b2"
+  
+  useEffect(() => {
+    console.log('Running preview claimable tokens')
+    console.log(previewClaimableTokens({link,address}))
+  }, [])
   
 
   const clickOnAddHook = useCallback(() => {
@@ -66,10 +69,14 @@ export function AirdropHookApp() {
     )
   }, [hook, hookDappContext])
 
-  function handleSelectAirdrop(airdrop:any) {
+  async function handleSelectAirdrop(airdrop:any) {
     setSelectedAirdrop(airdrop)
     setDropDownText(airdrop.name)
     setShowDropdown(false)
+
+    const newClaimableAmount = await previewClaimableTokens({link,address})
+    console.log('new claimable amount:',newClaimableAmount)
+    setClaimableAmount(newClaimableAmount)
   }
 
   function DropDownMenu() {
@@ -109,6 +116,9 @@ export function AirdropHookApp() {
       <ContentWrapper>
         <Row>
             <DropDownMenu />
+        </Row>
+        <Row>
+          claimable amount: {claimableAmount}
         </Row>
       </ContentWrapper>
       <ButtonPrimary onClick={clickOnAddHook}>+Add Pre-hook</ButtonPrimary>

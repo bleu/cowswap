@@ -1,12 +1,15 @@
 interface AirdropOption {
     name:string,
+    link:string,
 }
 
 export const AIRDROP_OPTIONS = [
     {
-        name:"COW"
+        name:"COW",
+        link:"https://raw.githubusercontent.com/bleu/cow-airdrop-token-mock/main/mock-airdrop-data/",
     },
     {
-        name:"OTHER"
+        name:"OTHER",
+        link:"",
     }
 ] as AirdropOption[]
