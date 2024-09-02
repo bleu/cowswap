@@ -6,6 +6,8 @@ interface PreviewClaimableTokensParams {
     address:string,
 }
 
+type IntervalsType = {[key: string]: string}
+
 interface RowType {
   index:number,
   type:string,
@@ -13,7 +15,10 @@ interface RowType {
   proof: any[],
 }
 
-export function findIntervalKey(name:string, intervals:{[key: string]: string}) {
+type ChunkDataType = {[key:string]:RowType[]}
+
+
+export function findIntervalKey(name:string, intervals:IntervalsType) {
     /* function to check if a name is inside a interval
     intervals is in the format: {
         "name1":"name2",
@@ -47,35 +52,69 @@ export function findIntervalKey(name:string, intervals:{[key: string]: string}) 
     return undefined;
   }
 
+const fecthIntervals = async (dataBaseUrl:string):Promise<IntervalsType> => {
+  // console.log(dataBaseUrl + 'mapping.json')
+  const response = await fetch(dataBaseUrl + 'mapping.json')
+  const intervals = await response.json()
+  console.log(intervals)
+  return intervals
+}
+
+const fetchChunk = async (dataBaseUrl:string,intervalKey:string):Promise<ChunkDataType> => {
+    const response = await fetch(`${dataBaseUrl}chunks/${intervalKey}.json`)
+    const chunkData = await response.json()
+    return chunkData
+}
+
+function parseAmount(weiAmount:string) {
+  const tokenAmount = Number(weiAmount) / 10**18
+    return tokenAmount.toFixed(4)
+}
 
 export const usePreviewClaimableTokens = () => {
 
-    const previewClaimableTokens = useCallback(async ({dataBaseUrl,address}: PreviewClaimableTokensParams) => {
-        console.log(dataBaseUrl + 'mapping.json')
-        const response = await fetch(dataBaseUrl + 'mapping.json')
-        const intervals = await response.json()
-        console.log(intervals)
-        let intervalKey
-        if (intervals) {
-            intervalKey = findIntervalKey(address, intervals)
-            console.log('intervalKey:',intervalKey)
+    const previewClaimableTokens = useCallback(
+      async({
+        dataBaseUrl,
+        address
+      }: PreviewClaimableTokensParams
+      ):Promise<string | undefined | void> => {
+      
+      let errorWhileFetching = false
+      const intervals = await fecthIntervals(dataBaseUrl)
+        .catch(error => {errorWhileFetching = true} )
 
-            console.log(`${dataBaseUrl}'chunks/${intervalKey}.json`)
-            const response2 = await fetch(`${dataBaseUrl}chunks/${intervalKey}.json`)
-            const chunkData = await response2.json()
-            if (address.toLowerCase() in chunkData) {
-                const claimData = chunkData[address.toLowerCase()]
-                console.log('claimData: ',claimData)
+      // Error fetching intervals
+      if (errorWhileFetching || (!intervals)) return 'Failed to check claimable tokens.'
 
-                const airDropData = claimData.filter((row:RowType) => row.type == 'Airdrop')
-                console.log(airDropData)
-                return airDropData[0].amount
-            } else {
-                console.log('Address is in interval, but not in chunk')
-            }
-        } else {
-            console.log('there are no intervals')
-        }
+      const intervalKey = findIntervalKey(address, intervals)
+      console.log('intervalKey:',intervalKey)
+      
+      // Interval key is undefined (user address is not in intervals)
+      if (!intervalKey) return 'Your address does not have claimable tokens'
+
+      console.log(`${dataBaseUrl}'chunks/${intervalKey}.json`)
+      
+      const chunkData = await fetchChunk(dataBaseUrl,intervalKey)
+        .catch(error => {errorWhileFetching = true})
+      const addressLowerCase = address.toLowerCase()
+      
+      // Error fetching chunks
+      if (errorWhileFetching || (!chunkData)) return "Failed to check claimable tokens"
+
+      // The user address is not listed in chunk
+      if (!(addressLowerCase in chunkData)) return 'Your address does not have claimable tokens'
+      
+      const claimData = chunkData[addressLowerCase]
+      console.log('claimData: ',claimData)
+
+      const airDropData = claimData.filter((row:RowType) => row.type == 'Airdrop')
+      console.log(airDropData)
+      
+      // The user has other kind of tokens, but not airdrops
+      if (airDropData.length < 1) return "Your address does not have claimable tokens"
+
+      return `You have ${parseAmount(airDropData[0].amount)} tokens to claim`
 
     }, []);
 

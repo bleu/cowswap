@@ -1,4 +1,4 @@
-interface AirdropOption {
+export interface AirdropOption {
     name:string,
     dataBaseUrl:string,
 }
@@ -10,6 +10,6 @@ export const AIRDROP_OPTIONS = [
     },
     {
         name:"OTHER",
-        link:"",
+        dataBaseUrl:"other",
     }
 ] as AirdropOption[]

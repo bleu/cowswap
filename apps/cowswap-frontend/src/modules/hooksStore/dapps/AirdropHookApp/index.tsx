@@ -3,7 +3,7 @@ import { useCallback, useContext, useEffect, useState } from 'react'
 import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { HookDappContext } from '../../context'
 
-import { AIRDROP_OPTIONS } from './constants'
+import { AIRDROP_OPTIONS, AirdropOption } from './constants'
 import { usePreviewClaimableTokens } from './hooks/usePreviewClaimableTokens'
 
 import { ButtonPrimary } from '@cowprotocol/ui'
@@ -15,8 +15,8 @@ import { Header } from './components/Header'
 import { ContentWrapper } from './components/ContentWrapper'
 import { Row } from './components/Row'
 import { Link } from './components/Link'
-
-type ClaimableAmount = string | undefined
+import { useWalletInfo } from '@cowprotocol/wallet'
+import { Database } from 'react-feather'
 
 const NAME = 'Airdrop'
 const DESCRIPTION = 'Claim an aidrop before swapping!'
@@ -42,15 +42,16 @@ export function AirdropHookApp() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedAirdrop, setSelectedAirdrop] = useState({})
   const [dropDownText, setDropDownText] = useState("Select your airdrop")
-  const [claimableAmount, setClaimableAmount ] = useState<ClaimableAmount>(undefined)
+  const [message, setMessage] = useState("")
   const previewClaimableTokens = usePreviewClaimableTokens()
-  const dataBaseUrl = AIRDROP_OPTIONS[0].dataBaseUrl
-  const address = "0xa90914762709441d557De208bAcE1edB1A3968b2"
+  const { account } = useWalletInfo()
+  // const dataBaseUrl = AIRDROP_OPTIONS[0].dataBaseUrl
+  // const address = "0xa90914762709441d557De208bAcE1edB1A3968b2"
   
-  useEffect(() => {
-    console.log('Running preview claimable tokens')
-    console.log(previewClaimableTokens({dataBaseUrl,address}))
-  }, [])
+  // useEffect(() => {
+  //   console.log('Running preview claimable tokens')
+  //   console.log(previewClaimableTokens({dataBaseUrl,address}))
+  // }, [])
   
 
   const clickOnAddHook = useCallback(() => {
@@ -69,14 +70,23 @@ export function AirdropHookApp() {
     )
   }, [hook, hookDappContext])
 
-  async function handleSelectAirdrop(airdrop:any) {
+  async function handleSelectAirdrop(airdrop:AirdropOption) {
     setSelectedAirdrop(airdrop)
     setDropDownText(airdrop.name)
     setShowDropdown(false)
 
-    const newClaimableAmount = await previewClaimableTokens({dataBaseUrl,address})
-    console.log('new claimable amount:',newClaimableAmount)
-    setClaimableAmount(newClaimableAmount)
+    const dataBaseUrl = airdrop.dataBaseUrl
+    console.log('database url:', dataBaseUrl, typeof dataBaseUrl)
+
+    if (! (account && dataBaseUrl) ) return
+
+    const address = account.toLowerCase()
+
+    const newMessage = await previewClaimableTokens({dataBaseUrl,address})
+    console.log('message from preview claimable tokens:',newMessage)
+    if (newMessage){
+      setMessage(newMessage)
+    }
   }
 
   function DropDownMenu() {
@@ -118,7 +128,11 @@ export function AirdropHookApp() {
             <DropDownMenu />
         </Row>
         <Row>
-          claimable amount: {claimableAmount}
+          {
+          (account)
+            ?message
+            : "Please log in to check claimable tokens"
+          }
         </Row>
       </ContentWrapper>
       <ButtonPrimary onClick={clickOnAddHook}>+Add Pre-hook</ButtonPrimary>
