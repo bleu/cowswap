@@ -44,12 +44,12 @@ export function AirdropHookApp() {
   const [dropDownText, setDropDownText] = useState("Select your airdrop")
   const [claimableAmount, setClaimableAmount ] = useState<ClaimableAmount>(undefined)
   const previewClaimableTokens = usePreviewClaimableTokens()
-  const link = AIRDROP_OPTIONS[0].link
+  const dataBaseUrl = AIRDROP_OPTIONS[0].dataBaseUrl
   const address = "0xa90914762709441d557De208bAcE1edB1A3968b2"
   
   useEffect(() => {
     console.log('Running preview claimable tokens')
-    console.log(previewClaimableTokens({link,address}))
+    console.log(previewClaimableTokens({dataBaseUrl,address}))
   }, [])
   
 
@@ -74,7 +74,7 @@ export function AirdropHookApp() {
     setDropDownText(airdrop.name)
     setShowDropdown(false)
 
-    const newClaimableAmount = await previewClaimableTokens({link,address})
+    const newClaimableAmount = await previewClaimableTokens({dataBaseUrl,address})
     console.log('new claimable amount:',newClaimableAmount)
     setClaimableAmount(newClaimableAmount)
   }

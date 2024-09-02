@@ -2,7 +2,7 @@ import { current } from "@reduxjs/toolkit";
 import { useCallback } from "react"
 
 interface PreviewClaimableTokensParams {
-    link:string,
+    dataBaseUrl:string,
     address:string,
 }
 
@@ -41,9 +41,9 @@ function findIntervalKey(name:string, intervals:object) {
 
 export const usePreviewClaimableTokens = () => {
 
-    const previewClaimableTokens = useCallback(async ({link,address}: PreviewClaimableTokensParams) => {
-        console.log(link + 'mapping.json')
-        const response = await fetch(link + 'mapping.json')
+    const previewClaimableTokens = useCallback(async ({dataBaseUrl,address}: PreviewClaimableTokensParams) => {
+        console.log(dataBaseUrl + 'mapping.json')
+        const response = await fetch(dataBaseUrl + 'mapping.json')
         const intervals = await response.json()
         console.log(intervals)
         let intervalKey
@@ -51,8 +51,8 @@ export const usePreviewClaimableTokens = () => {
             intervalKey = findIntervalKey(address, intervals)
             console.log('intervalKey:',intervalKey)
 
-            console.log(`${link}'chunks/${intervalKey}.json`)
-            const response2 = await fetch(`${link}chunks/${intervalKey}.json`)
+            console.log(`${dataBaseUrl}'chunks/${intervalKey}.json`)
+            const response2 = await fetch(`${dataBaseUrl}chunks/${intervalKey}.json`)
             const chunkData = await response2.json()
             if (address.toLowerCase() in chunkData) {
                 const claimData = chunkData[address.toLowerCase()]
