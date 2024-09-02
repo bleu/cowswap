@@ -79,7 +79,7 @@ export const usePreviewClaimableTokens = () => {
         address
       }: PreviewClaimableTokensParams
       ):Promise<string | undefined | void> => {
-      
+
       let errorWhileFetching = false
       const intervals = await fecthIntervals(dataBaseUrl)
         .catch(error => {errorWhileFetching = true} )

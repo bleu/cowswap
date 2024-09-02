@@ -43,6 +43,7 @@ export function AirdropHookApp() {
   const [selectedAirdrop, setSelectedAirdrop] = useState({})
   const [dropDownText, setDropDownText] = useState("Select your airdrop")
   const [message, setMessage] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const previewClaimableTokens = usePreviewClaimableTokens()
   const { account } = useWalletInfo()
   // const dataBaseUrl = AIRDROP_OPTIONS[0].dataBaseUrl
@@ -71,6 +72,7 @@ export function AirdropHookApp() {
   }, [hook, hookDappContext])
 
   async function handleSelectAirdrop(airdrop:AirdropOption) {
+    setIsLoading(true)
     setSelectedAirdrop(airdrop)
     setDropDownText(airdrop.name)
     setShowDropdown(false)
@@ -87,6 +89,7 @@ export function AirdropHookApp() {
     if (newMessage){
       setMessage(newMessage)
     }
+    setIsLoading(false)
   }
 
   function DropDownMenu() {
@@ -111,7 +114,7 @@ export function AirdropHookApp() {
         )}
         </Dropdown>
     )
-}
+  }
 
   if (!hookDappContext) {
     return 'Loading...'
@@ -129,9 +132,12 @@ export function AirdropHookApp() {
         </Row>
         <Row>
           {
-          (account)
-            ?message
-            : "Please log in to check claimable tokens"
+            (isLoading)
+              ? "Loading..."
+              : (account)
+                ?message
+                : "Please log in to check claimable tokens"
+            
           }
         </Row>
       </ContentWrapper>

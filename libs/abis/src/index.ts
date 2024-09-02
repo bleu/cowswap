@@ -23,6 +23,7 @@ import _Erc20Bytes32Abi from './abis-legacy/erc20_bytes32.json'
 import _Erc721Abi from './abis-legacy/erc721.json'
 import _UniswapInterfaceMulticallAbi from './abis-legacy/UniswapInterfaceMulticall.json'
 import _WethAbi from './abis-legacy/weth.json'
+import _VirtualTokenAirdrop from './abis/CoWProtocolVirtualToken.json'
 
 import type { Erc20Interface } from './generated/legacy/Erc20'
 
@@ -34,6 +35,7 @@ export const MerkleDropAbi = _MerkleDropAbi
 export const TokenDistroAbi = _TokenDistroAbi
 export const CoWSwapEthFlowAbi = _CoWSwapEthFlowAbi
 export const SBCDepositContractAbi = _SBCDepositContractAbi
+export const VirtualTokenAirdrop = _VirtualTokenAirdrop
 
 export * from './generated/custom'
 export type { GPv2Order } from './generated/custom/ComposableCoW'
@@ -47,7 +49,7 @@ export type {
   Erc721,
   Erc1155,
   Weth,
-  UniswapInterfaceMulticall
+  UniswapInterfaceMulticall,
 } from './generated/legacy'
 
 export type { Erc20Interface } from './generated/legacy/Erc20'
