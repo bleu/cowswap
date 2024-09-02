@@ -6,7 +6,14 @@ interface PreviewClaimableTokensParams {
     address:string,
 }
 
-export function findIntervalKey(name:string, intervals:object) {
+interface RowType {
+  index:number,
+  type:string,
+  amount:string,
+  proof: any[],
+}
+
+export function findIntervalKey(name:string, intervals:{[key: string]: string}) {
     /* function to check if a name is inside a interval
     intervals is in the format: {
         "name1":"name2",
@@ -60,7 +67,7 @@ export const usePreviewClaimableTokens = () => {
                 const claimData = chunkData[address.toLowerCase()]
                 console.log('claimData: ',claimData)
 
-                const airDropData = claimData.filter((row) => row.type == 'Airdrop')
+                const airDropData = claimData.filter((row:RowType) => row.type == 'Airdrop')
                 console.log(airDropData)
                 return airDropData[0].amount
             } else {
