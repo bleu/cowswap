@@ -6,7 +6,7 @@ interface PreviewClaimableTokensParams {
     address:string,
 }
 
-function findIntervalKey(name:string, intervals:object) {
+export function findIntervalKey(name:string, intervals:object) {
     /* function to check if a name is inside a interval
     intervals is in the format: {
         "name1":"name2",
