@@ -27,6 +27,8 @@ export function findIntervalKey(name:string, intervals:object) {
         return currentKey
         found = true
       }
+      // Quit at once when verifying that name will not be in the intervals
+      // Imagine searching for "Albert" in a phone list, but you've finished the "A" section
       if (currentKey > name) {
         return undefined
       }
