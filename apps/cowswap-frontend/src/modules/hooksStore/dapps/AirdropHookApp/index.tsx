@@ -4,9 +4,8 @@ import ICON_ARROW_DOWN from '@cowprotocol/assets/images/carret-down.svg'
 import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary } from '@cowprotocol/ui'
 import { useWalletInfo } from '@cowprotocol/wallet'
-import { ethers } from 'ethers'
+import { formatTokenAmount } from '@cowprotocol/common-utils'
 import { errors } from './hooks/usePreviewClaimableTokens'
-
 import SVG from 'react-inlinesvg'
 
 import { ContentWrapper } from './components/ContentWrapper'
@@ -25,6 +24,7 @@ import {
 import { HookDappContext } from '../../context'
 import { useVirtualTokenAirdropContract } from './hooks/useAirdropContract'
 import useSWR from 'swr'
+import { Fraction } from '@uniswap/sdk-core'
 
 const NAME = 'Airdrop'
 const DESCRIPTION = 'Claim an aidrop before swapping!'
@@ -39,14 +39,6 @@ export const PRE_AIRDROP: HookDappInternal = {
   image: IMAGE_URL,
   component: <AirdropHookApp />,
   version: '0.1.0',
-}
-
-function formatWeiToEth(weiValue: string) {
-  const ethValue = ethers.utils.formatEther(BigInt(weiValue))
-  const [whole, decimal] = ethValue.split('.')
-  const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  const formattedDecimal = decimal.padEnd(4, '0').slice(0, 4)
-  return `${formattedWhole}.${formattedDecimal}`
 }
 
 export function AirdropHookApp() {
@@ -145,8 +137,9 @@ export function AirdropHookApp() {
       setMessage(error.message)
       return
     }
+
     if (claimData?.amount) {
-      const tokenAmount = formatWeiToEth(claimData.amount)
+      const tokenAmount = formatTokenAmount(new Fraction(claimData.amount, 10 ** 18))
       const newMessage = isClaimed
         ? `You have already claimed ${tokenAmount} tokens`
         : `You have ${tokenAmount} tokens to claim`
