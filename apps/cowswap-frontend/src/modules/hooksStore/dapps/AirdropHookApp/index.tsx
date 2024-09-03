@@ -29,6 +29,8 @@ const DESCRIPTION = 'Claim an aidrop before swapping!'
 const IMAGE_URL =
   'https://static.vecteezy.com/system/resources/previews/017/317/302/original/an-icon-of-medical-airdrop-editable-and-easy-to-use-vector.jpg'
 
+const dropdownInitialText = 'Select your airdrop'
+
 export const PRE_AIRDROP: HookDappInternal = {
   name: NAME,
   description: DESCRIPTION,
@@ -48,7 +50,7 @@ export function AirdropHookApp() {
   })
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedAirdrop, setSelectedAirdrop] = useState<AirdropOption>()
-  const [dropDownText, setDropDownText] = useState('Select your airdrop')
+  const [dropDownText, setDropDownText] = useState(dropdownInitialText)
   const [claimData, setClaimData] = useState<RowType>({} as RowType)
   const [isClaimed, setIsClaimed] = useState(false)
   const [message, setMessage] = useState('')
@@ -117,7 +119,6 @@ export function AirdropHookApp() {
       setMessage(error.message)
       return
     }
-
     if (claimData?.amount) {
       const tokenAmount = formatTokenAmount(new Fraction(claimData.amount, 10 ** 18))
       const newMessage = isClaimed
@@ -130,6 +131,10 @@ export function AirdropHookApp() {
     }
     if (!account) {
       setMessage('Please log in to check claimable tokens')
+      return
+    }
+    if (dropDownText === dropdownInitialText) {
+      setMessage('')
     }
   }, [claimData, account, isLoading, error])
 
