@@ -1,4 +1,4 @@
-import styled from "styled-components/macro";
+import styled from 'styled-components/macro'
 
 export const Header = styled.div`
   display: flex;
@@ -6,7 +6,7 @@ export const Header = styled.div`
   justify-content: center;
   align-items: center;
   padding: 0.5em;
-  gap:10px;
+  gap: 10px;
 
   p {
     padding: 0 1em;

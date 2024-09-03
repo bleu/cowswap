@@ -1,10 +1,11 @@
-import { Media, UI } from "@cowprotocol/ui"
-import styled from "styled-components/macro"
+import { Media, UI } from '@cowprotocol/ui'
+
+import styled from 'styled-components/macro'
 
 export const Dropdown = styled.div`
   position: relative;
   display: inline-block;
-  width:100%;
+  width: 100%;
 `
 
 export const DropdownContent = styled.div`
@@ -45,12 +46,12 @@ export const DropdownButton = styled.div`
   cursor: pointer;
   border-radius: 12px;
   background-color: var(${UI.COLOR_PAPER_DARKER});
-  padding:12px;
-  width:100%;
+  padding: 12px;
+  width: 100%;
 
   &:hover {
     background-color: var(${UI.COLOR_PRIMARY_LIGHTER});
-    color:#000000;
+    color: #000000;
     /* > svg {
       transform: rotate(-90deg);
     } */
@@ -66,18 +67,17 @@ export const DropdownButton = styled.div`
 `
 
 export const SelectButton = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    border-radius: 16px;
-    background-color: #18193B;
-    padding:1rem;
-    width:100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-radius: 16px;
+  background-color: #18193b;
+  padding: 1rem;
+  width: 100%;
 
-    &:hover {
-    background-color: #65D9FF;
-    color:#000000;
-    }
-
+  &:hover {
+    background-color: #65d9ff;
+    color: #000000;
+  }
 `

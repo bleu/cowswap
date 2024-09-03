@@ -1,5 +1,5 @@
-import { UI } from "@cowprotocol/ui";
-import styled from "styled-components/macro";
+import { UI } from '@cowprotocol/ui'
+import styled from 'styled-components/macro'
 
 export const Input = styled.input`
   border: 1px solid var(${UI.COLOR_BORDER});
