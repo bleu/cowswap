@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-interface PreviewClaimableTokensParams {
+export interface PreviewClaimableTokensParams {
   dataBaseUrl: string
   address: string
 }
@@ -15,6 +15,13 @@ export interface RowType {
 }
 
 type ChunkDataType = { [key: string]: RowType[] }
+
+export const errors = {
+  NO_CLAIMABLE_TOKENS: "You don't have claimable tokens",
+  ERROR_FETCHING_DATA: 'There was an error trying to load claimable tokens',
+  NO_CLAIMABLE_AIRDROPS: 'You possibly have other items to claim, but not Airdrops',
+  UNEXPECTED_WRONG_FORMAT_DATA: 'Unexpected error fetching data: wrong format data',
+}
 
 export function findIntervalKey(name: string, intervals: IntervalsType) {
   /* function to check if a name is inside a interval
@@ -51,10 +58,8 @@ export function findIntervalKey(name: string, intervals: IntervalsType) {
 }
 
 const fecthIntervals = async (dataBaseUrl: string): Promise<IntervalsType> => {
-  // console.log(dataBaseUrl + 'mapping.json')
   const response = await fetch(dataBaseUrl + 'mapping.json')
   const intervals = await response.json()
-  console.log(intervals)
   return intervals
 }
 
@@ -67,21 +72,20 @@ const fetchChunk = async (dataBaseUrl: string, intervalKey: string): Promise<Chu
 export const usePreviewClaimableTokens = () => {
   const previewClaimableTokens = useCallback(
     async ({ dataBaseUrl, address }: PreviewClaimableTokensParams): Promise<RowType | undefined> => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
       let errorWhileFetching = false
       const intervals = await fecthIntervals(dataBaseUrl).catch((error) => {
         errorWhileFetching = true
       })
 
       // Error fetching intervals
-      if (errorWhileFetching || !intervals) return
+      if (errorWhileFetching || !intervals) throw new Error(errors.ERROR_FETCHING_DATA)
 
       const intervalKey = findIntervalKey(address, intervals)
-      console.log('intervalKey:', intervalKey)
 
       // Interval key is undefined (user address is not in intervals)
-      if (!intervalKey) return
-
-      console.log(`${dataBaseUrl}'chunks/${intervalKey}.json`)
+      if (!intervalKey) throw new Error(errors.NO_CLAIMABLE_TOKENS)
 
       const chunkData = await fetchChunk(dataBaseUrl, intervalKey).catch((error) => {
         errorWhileFetching = true
@@ -89,19 +93,16 @@ export const usePreviewClaimableTokens = () => {
       const addressLowerCase = address.toLowerCase()
 
       // Error fetching chunks
-      if (errorWhileFetching || !chunkData) return
+      if (errorWhileFetching || !chunkData) throw new Error(errors.ERROR_FETCHING_DATA)
 
       // The user address is not listed in chunk
-      if (!(addressLowerCase in chunkData)) return
+      if (!(addressLowerCase in chunkData)) throw new Error(errors.NO_CLAIMABLE_TOKENS)
 
       const claimData = chunkData[addressLowerCase]
-      console.log('claimData: ', claimData)
 
       const airDropData = claimData.filter((row: RowType) => row.type == 'Airdrop')
-      console.log(airDropData)
-
       // The user has other kind of tokens, but not airdrops
-      if (airDropData.length < 1) return
+      if (airDropData.length < 1) throw new Error(errors.NO_CLAIMABLE_AIRDROPS)
 
       return airDropData[0]
     },

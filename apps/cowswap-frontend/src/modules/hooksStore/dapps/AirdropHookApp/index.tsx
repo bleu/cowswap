@@ -4,6 +4,8 @@ import ICON_ARROW_DOWN from '@cowprotocol/assets/images/carret-down.svg'
 import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary } from '@cowprotocol/ui'
 import { useWalletInfo } from '@cowprotocol/wallet'
+import { ethers } from 'ethers'
+import { errors } from './hooks/usePreviewClaimableTokens'
 
 import SVG from 'react-inlinesvg'
 
@@ -14,10 +16,15 @@ import { Link } from './components/Link'
 import { Row } from './components/Row'
 import { Wrapper } from './components/Wrapper'
 import { AIRDROP_OPTIONS, AirdropOption } from './constants'
-import { RowType, usePreviewClaimableTokens } from './hooks/usePreviewClaimableTokens'
+import {
+  type PreviewClaimableTokensParams,
+  type RowType,
+  usePreviewClaimableTokens,
+} from './hooks/usePreviewClaimableTokens'
 
 import { HookDappContext } from '../../context'
 import { useVirtualTokenAirdropContract } from './hooks/useAirdropContract'
+import useSWR from 'swr'
 
 const NAME = 'Airdrop'
 const DESCRIPTION = 'Claim an aidrop before swapping!'
@@ -34,8 +41,12 @@ export const PRE_AIRDROP: HookDappInternal = {
   version: '0.1.0',
 }
 
-export interface IClaimData extends RowType {
-  isClaimed: boolean
+function formatWeiToEth(weiValue: string) {
+  const ethValue = ethers.utils.formatEther(BigInt(weiValue))
+  const [whole, decimal] = ethValue.split('.')
+  const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const formattedDecimal = decimal.padEnd(4, '0').slice(0, 4)
+  return `${formattedWhole}.${formattedDecimal}`
 }
 
 export function AirdropHookApp() {
@@ -48,13 +59,42 @@ export function AirdropHookApp() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedAirdrop, setSelectedAirdrop] = useState<AirdropOption>()
   const [dropDownText, setDropDownText] = useState('Select your airdrop')
-  const [claimData, setClaimData] = useState<IClaimData>()
+  const [claimData, setClaimData] = useState<RowType>({} as RowType)
+  const [isClaimed, setIsClaimed] = useState(false)
   const [message, setMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const previewClaimableTokens = usePreviewClaimableTokens()
   const { account } = useWalletInfo()
 
   const airdropContract = useVirtualTokenAirdropContract(selectedAirdrop?.addressesMapping)
+
+  const previewClaimableTokensAndCheckIfClaimed = async ({ dataBaseUrl, address }: PreviewClaimableTokensParams) => {
+    const newClaimData = await previewClaimableTokens({ dataBaseUrl, address })
+    if (!newClaimData) throw new Error(errors.ERROR_FETCHING_DATA)
+    if (!newClaimData.index) throw new Error(errors.UNEXPECTED_WRONG_FORMAT_DATA)
+    const newIsClaimed = await airdropContract?.isClaimed(newClaimData.index) // TODO: test what happens if the tokens are already claimed
+    if (newIsClaimed) setIsClaimed(newIsClaimed)
+    setClaimData(newClaimData)
+    return newClaimData
+  }
+
+  const {
+    data: newClaimData,
+    error,
+    isLoading,
+  } = useSWR<RowType | undefined>(
+    selectedAirdrop && account
+      ? {
+          dataBaseUrl: selectedAirdrop.dataBaseUrl,
+          address: account.toLowerCase(),
+        }
+      : null,
+    previewClaimableTokensAndCheckIfClaimed,
+    { errorRetryCount: 0 }
+  )
+
+  useEffect(() => {
+    setClaimData(newClaimData ? newClaimData : ({} as RowType))
+  }, [newClaimData])
 
   const clickOnAddHook = useCallback(() => {
     const { callData, gasLimit, target } = hook
@@ -73,25 +113,9 @@ export function AirdropHookApp() {
   }, [hook, hookDappContext])
 
   async function handleSelectAirdrop(airdrop: AirdropOption) {
-    setIsLoading(true)
     setSelectedAirdrop(airdrop)
     setDropDownText(airdrop.name)
     setShowDropdown(false)
-
-    const dataBaseUrl = airdrop.dataBaseUrl
-    console.log('database url:', dataBaseUrl, typeof dataBaseUrl)
-
-    if (!(account && dataBaseUrl)) return
-
-    const address = account.toLowerCase()
-
-    const newClaimData = await previewClaimableTokens({ dataBaseUrl, address })
-
-    const isClaimed = claimData?.index ? await airdropContract?.isClaimed(claimData.index) : false
-
-    setClaimData({ ...newClaimData, isClaimed: !!isClaimed } as IClaimData) // TODO: improve this type with errors on preview claimable tokens
-
-    setIsLoading(false)
   }
 
   function DropDownMenu() {
@@ -113,19 +137,28 @@ export function AirdropHookApp() {
   }
 
   useEffect(() => {
-    if (claimData?.amount && claimData?.isClaimed) {
-      setMessage(`You have already claimed ${claimData.amount} tokens`)
+    if (isLoading) {
+      setMessage('Loading...')
+      return
     }
-    if (claimData?.amount && !claimData?.isClaimed) {
-      setMessage(`You have ${claimData.amount} tokens to claim`)
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    if (claimData?.amount) {
+      const tokenAmount = formatWeiToEth(claimData.amount)
+      const newMessage = isClaimed
+        ? `You have already claimed ${tokenAmount} tokens`
+        : `You have ${tokenAmount} tokens to claim`
+      setMessage(newMessage)
     }
     if (!claimData?.amount) {
-      setMessage('No tokens to claim')
+      setMessage("You don't have claimable tokens")
     }
     if (!account) {
       setMessage('Please log in to check claimable tokens')
     }
-  }, [claimData, account])
+  }, [claimData, account, isLoading, error])
 
   if (!hookDappContext) {
     return 'Loading...'
@@ -143,7 +176,9 @@ export function AirdropHookApp() {
         </Row>
         <Row>{message}</Row>
       </ContentWrapper>
-      <ButtonPrimary onClick={clickOnAddHook}>+Add Pre-hook</ButtonPrimary>
+      <ButtonPrimary disabled={!(!isClaimed && !!account && !!claimData.amount)} onClick={clickOnAddHook}>
+        +Add Pre-hook
+      </ButtonPrimary>
       <Link
         onClick={(e) => {
           e.preventDefault()
