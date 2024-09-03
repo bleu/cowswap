@@ -1,15 +1,13 @@
 import { useCallback, useContext, useEffect, useState } from 'react'
 
-import ICON_ARROW_DOWN from '@cowprotocol/assets/images/carret-down.svg'
 import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary } from '@cowprotocol/ui'
 import { useWalletInfo } from '@cowprotocol/wallet'
 import { formatTokenAmount } from '@cowprotocol/common-utils'
 import { errors } from './hooks/usePreviewClaimableTokens'
-import SVG from 'react-inlinesvg'
 
 import { ContentWrapper } from './components/ContentWrapper'
-import { Dropdown, DropdownButton, DropdownContent, SelectButton } from './components/DropDown'
+import { DropDownMenu } from './components/DropDown'
 import { Header } from './components/Header'
 import { Link } from './components/Link'
 import { Row } from './components/Row'
@@ -110,24 +108,6 @@ export function AirdropHookApp() {
     setShowDropdown(false)
   }
 
-  function DropDownMenu() {
-    return (
-      <Dropdown>
-        <DropdownButton onClick={() => setShowDropdown(!showDropdown)}>
-          {dropDownText}
-          <SVG src={ICON_ARROW_DOWN} />
-        </DropdownButton>
-        {showDropdown && (
-          <DropdownContent>
-            {AIRDROP_OPTIONS.map((airdrop) => {
-              return <SelectButton onClick={() => handleSelectAirdrop(airdrop)}>{airdrop.name}</SelectButton>
-            })}
-          </DropdownContent>
-        )}
-      </Dropdown>
-    )
-  }
-
   useEffect(() => {
     if (isLoading) {
       setMessage('Loading...')
@@ -165,7 +145,13 @@ export function AirdropHookApp() {
       </Header>
       <ContentWrapper>
         <Row>
-          <DropDownMenu />
+          <DropDownMenu
+            airdropOptions={AIRDROP_OPTIONS}
+            dropdownText={dropDownText}
+            showDropdown={showDropdown}
+            setShowDropdown={setShowDropdown}
+            handleSelectAirdrop={handleSelectAirdrop}
+          />
         </Row>
         <Row>{message}</Row>
       </ContentWrapper>
