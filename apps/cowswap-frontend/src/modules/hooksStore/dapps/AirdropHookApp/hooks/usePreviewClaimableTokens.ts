@@ -25,7 +25,7 @@ export interface IClaimData extends AirdropDataInfo {
 
 type ChunkDataType = { [key: string]: AirdropDataInfo[] }
 
-export const errors = {
+export const AIRDROP_PREVIEW_ERRORS = {
   NO_CLAIMABLE_TOKENS: "You don't have claimable tokens",
   ERROR_FETCHING_DATA: 'There was an error trying to load claimable tokens',
   NO_CLAIMABLE_AIRDROPS: 'You possibly have other items to claim, but not Airdrops',
@@ -88,20 +88,20 @@ const fetchAddressIsEligible = async ({
   const intervalKey = findIntervalKey(address, intervals)
 
   // Interval key is undefined (user address is not in intervals)
-  if (!intervalKey) throw new Error(errors.NO_CLAIMABLE_TOKENS)
+  if (!intervalKey) throw new Error(AIRDROP_PREVIEW_ERRORS.NO_CLAIMABLE_TOKENS)
 
   const chunkData = await fetchChunk(dataBaseUrl, intervalKey)
 
   const addressLowerCase = address.toLowerCase()
 
   // The user address is not listed in chunk
-  if (!(addressLowerCase in chunkData)) throw new Error(errors.NO_CLAIMABLE_TOKENS)
+  if (!(addressLowerCase in chunkData)) throw new Error(AIRDROP_PREVIEW_ERRORS.NO_CLAIMABLE_TOKENS)
 
   const claimData = chunkData[addressLowerCase]
 
   const airDropData = claimData.filter((row: AirdropDataInfo) => row.type == 'Airdrop')
   // The user has other kind of tokens, but not airdrops
-  if (airDropData.length < 1) throw new Error(errors.NO_CLAIMABLE_AIRDROPS)
+  if (airDropData.length < 1) throw new Error(AIRDROP_PREVIEW_ERRORS.NO_CLAIMABLE_AIRDROPS)
 
   return airDropData[0]
 }
@@ -115,7 +115,8 @@ export const usePreviewClaimableTokens = (selectedAirdrop?: AirdropOption) => {
     address,
   }: PreviewClaimableTokensParams): Promise<IClaimData> => {
     const newClaimData = await fetchAddressIsEligible({ dataBaseUrl, address })
-    if (!newClaimData || !airdropContract || !newClaimData.index) throw new Error(errors.ERROR_FETCHING_DATA)
+    if (!newClaimData || !airdropContract || !newClaimData.index)
+      throw new Error(AIRDROP_PREVIEW_ERRORS.ERROR_FETCHING_DATA)
 
     const isClaimed = await airdropContract?.isClaimed(newClaimData.index)
     return {
