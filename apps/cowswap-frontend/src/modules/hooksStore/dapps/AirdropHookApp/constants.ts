@@ -3,7 +3,8 @@ import { SupportedChainId } from '@cowprotocol/cow-sdk'
 export interface AirdropOption {
   name: string
   dataBaseUrl: string
-  addressesMapping?: Record<SupportedChainId, string>
+  decimals: number
+  addressesMapping: Record<SupportedChainId, string>
 }
 
 export const AIRDROP_OPTIONS = [
@@ -13,9 +14,6 @@ export const AIRDROP_OPTIONS = [
     addressesMapping: {
       [SupportedChainId.SEPOLIA]: '0x665a921D720D27118ae4f9D1fA98976FEad04e5A',
     },
-  },
-  {
-    name: 'OTHER',
-    dataBaseUrl: 'other',
+    decimals: 18,
   },
 ] as AirdropOption[]

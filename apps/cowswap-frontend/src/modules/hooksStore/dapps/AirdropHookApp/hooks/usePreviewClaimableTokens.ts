@@ -1,4 +1,10 @@
-import { useCallback } from 'react'
+import { useWalletInfo } from '@cowprotocol/wallet'
+
+import useSWR from 'swr'
+
+import { useVirtualTokenAirdropContract } from './useAirdropContract'
+
+import { AirdropOption } from '../constants'
 
 export interface PreviewClaimableTokensParams {
   dataBaseUrl: string
@@ -7,14 +13,17 @@ export interface PreviewClaimableTokensParams {
 
 type IntervalsType = { [key: string]: string }
 
-export interface RowType {
+export interface AirdropDataInfo {
   index: number
   type: string
   amount: string
   proof: any[]
 }
+export interface IClaimData extends AirdropDataInfo {
+  isClaimed: boolean
+}
 
-type ChunkDataType = { [key: string]: RowType[] }
+type ChunkDataType = { [key: string]: AirdropDataInfo[] }
 
 export const errors = {
   NO_CLAIMABLE_TOKENS: "You don't have claimable tokens",
@@ -58,7 +67,7 @@ export function findIntervalKey(name: string, intervals: IntervalsType) {
   return undefined
 }
 
-const fecthIntervals = async (dataBaseUrl: string): Promise<IntervalsType> => {
+const fetchIntervals = async (dataBaseUrl: string): Promise<IntervalsType> => {
   const response = await fetch(dataBaseUrl + 'mapping.json')
   const intervals = await response.json()
   return intervals
@@ -70,45 +79,59 @@ const fetchChunk = async (dataBaseUrl: string, intervalKey: string): Promise<Chu
   return chunkData
 }
 
-export const usePreviewClaimableTokens = () => {
-  const previewClaimableTokens = async ({
+const fetchAddressIsEligible = async ({
+  dataBaseUrl,
+  address,
+}: PreviewClaimableTokensParams): Promise<AirdropDataInfo | undefined> => {
+  const intervals = await fetchIntervals(dataBaseUrl)
+
+  const intervalKey = findIntervalKey(address, intervals)
+
+  // Interval key is undefined (user address is not in intervals)
+  if (!intervalKey) throw new Error(errors.NO_CLAIMABLE_TOKENS)
+
+  const chunkData = await fetchChunk(dataBaseUrl, intervalKey)
+
+  const addressLowerCase = address.toLowerCase()
+
+  // The user address is not listed in chunk
+  if (!(addressLowerCase in chunkData)) throw new Error(errors.NO_CLAIMABLE_TOKENS)
+
+  const claimData = chunkData[addressLowerCase]
+
+  const airDropData = claimData.filter((row: AirdropDataInfo) => row.type == 'Airdrop')
+  // The user has other kind of tokens, but not airdrops
+  if (airDropData.length < 1) throw new Error(errors.NO_CLAIMABLE_AIRDROPS)
+
+  return airDropData[0]
+}
+
+export const usePreviewClaimableTokens = (selectedAirdrop?: AirdropOption) => {
+  const airdropContract = useVirtualTokenAirdropContract(selectedAirdrop?.addressesMapping)
+  const { account } = useWalletInfo()
+
+  const fetchPreviewClaimableTokens = async ({
     dataBaseUrl,
     address,
-  }: PreviewClaimableTokensParams): Promise<RowType | undefined> => {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }: PreviewClaimableTokensParams): Promise<IClaimData> => {
+    const newClaimData = await fetchAddressIsEligible({ dataBaseUrl, address })
+    if (!newClaimData || !airdropContract || !newClaimData.index) throw new Error(errors.ERROR_FETCHING_DATA)
 
-    let errorWhileFetching = false
-    const intervals = await fecthIntervals(dataBaseUrl).catch((error) => {
-      errorWhileFetching = true
-    })
-
-    // Error fetching intervals
-    if (errorWhileFetching || !intervals) throw new Error(errors.ERROR_FETCHING_DATA)
-
-    const intervalKey = findIntervalKey(address, intervals)
-
-    // Interval key is undefined (user address is not in intervals)
-    if (!intervalKey) throw new Error(errors.NO_CLAIMABLE_TOKENS)
-
-    const chunkData = await fetchChunk(dataBaseUrl, intervalKey).catch((error) => {
-      errorWhileFetching = true
-    })
-    const addressLowerCase = address.toLowerCase()
-
-    // Error fetching chunks
-    if (errorWhileFetching || !chunkData) throw new Error(errors.ERROR_FETCHING_DATA)
-
-    // The user address is not listed in chunk
-    if (!(addressLowerCase in chunkData)) throw new Error(errors.NO_CLAIMABLE_TOKENS)
-
-    const claimData = chunkData[addressLowerCase]
-
-    const airDropData = claimData.filter((row: RowType) => row.type == 'Airdrop')
-    // The user has other kind of tokens, but not airdrops
-    if (airDropData.length < 1) throw new Error(errors.NO_CLAIMABLE_AIRDROPS)
-
-    return airDropData[0]
+    const isClaimed = await airdropContract?.isClaimed(newClaimData.index)
+    return {
+      ...newClaimData,
+      isClaimed,
+    }
   }
 
-  return previewClaimableTokens
+  return useSWR<IClaimData | undefined>(
+    selectedAirdrop && account
+      ? {
+          dataBaseUrl: selectedAirdrop.dataBaseUrl,
+          address: account.toLowerCase(),
+        }
+      : null,
+    fetchPreviewClaimableTokens,
+    { errorRetryCount: 0 }
+  )
 }
