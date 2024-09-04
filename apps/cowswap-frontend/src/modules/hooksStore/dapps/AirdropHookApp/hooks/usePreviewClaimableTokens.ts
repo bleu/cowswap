@@ -23,17 +23,18 @@ export const errors = {
   UNEXPECTED_WRONG_FORMAT_DATA: 'Unexpected error fetching data: wrong format data',
 }
 
-export function findIntervalKey(name: string, intervals: IntervalsType) {
-  /* function to check if a name is inside a interval
-    intervals is in the format: {
-        "name1":"name2",
-        "name3":"name4",
-        ...
-    }
-    name4 > name3 > name2 > name1
+/*
+function to check if a name is inside a interval
+intervals is in the format: {
+    "name1":"name2",
+    "name3":"name4",
+    ...
+}
+name4 > name3 > name2 > name1
 
-    returns the interval key if the condition is checked, else undefined
-    */
+returns the interval key if the condition is checked, else undefined
+*/
+export function findIntervalKey(name: string, intervals: IntervalsType) {
   const keys = Object.keys(intervals)
   const numberOfKeys = keys.length
   let currentKeyIndex = 0
@@ -70,44 +71,44 @@ const fetchChunk = async (dataBaseUrl: string, intervalKey: string): Promise<Chu
 }
 
 export const usePreviewClaimableTokens = () => {
-  const previewClaimableTokens = useCallback(
-    async ({ dataBaseUrl, address }: PreviewClaimableTokensParams): Promise<RowType | undefined> => {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+  const previewClaimableTokens = async ({
+    dataBaseUrl,
+    address,
+  }: PreviewClaimableTokensParams): Promise<RowType | undefined> => {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      let errorWhileFetching = false
-      const intervals = await fecthIntervals(dataBaseUrl).catch((error) => {
-        errorWhileFetching = true
-      })
+    let errorWhileFetching = false
+    const intervals = await fecthIntervals(dataBaseUrl).catch((error) => {
+      errorWhileFetching = true
+    })
 
-      // Error fetching intervals
-      if (errorWhileFetching || !intervals) throw new Error(errors.ERROR_FETCHING_DATA)
+    // Error fetching intervals
+    if (errorWhileFetching || !intervals) throw new Error(errors.ERROR_FETCHING_DATA)
 
-      const intervalKey = findIntervalKey(address, intervals)
+    const intervalKey = findIntervalKey(address, intervals)
 
-      // Interval key is undefined (user address is not in intervals)
-      if (!intervalKey) throw new Error(errors.NO_CLAIMABLE_TOKENS)
+    // Interval key is undefined (user address is not in intervals)
+    if (!intervalKey) throw new Error(errors.NO_CLAIMABLE_TOKENS)
 
-      const chunkData = await fetchChunk(dataBaseUrl, intervalKey).catch((error) => {
-        errorWhileFetching = true
-      })
-      const addressLowerCase = address.toLowerCase()
+    const chunkData = await fetchChunk(dataBaseUrl, intervalKey).catch((error) => {
+      errorWhileFetching = true
+    })
+    const addressLowerCase = address.toLowerCase()
 
-      // Error fetching chunks
-      if (errorWhileFetching || !chunkData) throw new Error(errors.ERROR_FETCHING_DATA)
+    // Error fetching chunks
+    if (errorWhileFetching || !chunkData) throw new Error(errors.ERROR_FETCHING_DATA)
 
-      // The user address is not listed in chunk
-      if (!(addressLowerCase in chunkData)) throw new Error(errors.NO_CLAIMABLE_TOKENS)
+    // The user address is not listed in chunk
+    if (!(addressLowerCase in chunkData)) throw new Error(errors.NO_CLAIMABLE_TOKENS)
 
-      const claimData = chunkData[addressLowerCase]
+    const claimData = chunkData[addressLowerCase]
 
-      const airDropData = claimData.filter((row: RowType) => row.type == 'Airdrop')
-      // The user has other kind of tokens, but not airdrops
-      if (airDropData.length < 1) throw new Error(errors.NO_CLAIMABLE_AIRDROPS)
+    const airDropData = claimData.filter((row: RowType) => row.type == 'Airdrop')
+    // The user has other kind of tokens, but not airdrops
+    if (airDropData.length < 1) throw new Error(errors.NO_CLAIMABLE_AIRDROPS)
 
-      return airDropData[0]
-    },
-    []
-  )
+    return airDropData[0]
+  }
 
   return previewClaimableTokens
 }

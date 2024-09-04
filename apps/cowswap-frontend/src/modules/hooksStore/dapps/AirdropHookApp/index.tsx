@@ -63,7 +63,7 @@ export function AirdropHookApp() {
     const newClaimData = await previewClaimableTokens({ dataBaseUrl, address })
     if (!newClaimData) throw new Error(errors.ERROR_FETCHING_DATA)
     if (!newClaimData.index) throw new Error(errors.UNEXPECTED_WRONG_FORMAT_DATA)
-    const newIsClaimed = await airdropContract?.isClaimed(newClaimData.index) // TODO: test what happens if the tokens are already claimed
+    const newIsClaimed = await airdropContract?.isClaimed(newClaimData.index)
     if (newIsClaimed) setIsClaimed(newIsClaimed)
     setClaimData(newClaimData)
     return newClaimData
@@ -98,7 +98,7 @@ export function AirdropHookApp() {
       {
         hook: hook,
         dapp: PRE_AIRDROP,
-        outputTokens: undefined, // TODO: Simulate and extract the output tokens
+        outputTokens: undefined,
       },
       true
     )
