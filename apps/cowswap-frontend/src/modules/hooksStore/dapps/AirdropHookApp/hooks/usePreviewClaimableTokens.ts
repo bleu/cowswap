@@ -17,7 +17,7 @@ export interface AirdropDataInfo {
   index: number
   type: string
   amount: string
-  proof: any[]
+  proof: string[]
 }
 export interface IClaimData extends AirdropDataInfo {
   isClaimed: boolean

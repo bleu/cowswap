@@ -1,10 +1,12 @@
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { formatTokenAmount } from '@cowprotocol/common-utils'
 import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary } from '@cowprotocol/ui'
 import { useWalletInfo } from '@cowprotocol/wallet'
 import { Fraction } from '@uniswap/sdk-core'
+import { BigNumber } from '@ethersproject/bignumber'
+import { CurrencyAmount } from '@uniswap/sdk-core'
 
 import { ContentWrapper } from './components/ContentWrapper'
 import { DropDownMenu } from './components/DropDown'
@@ -14,6 +16,10 @@ import { Row } from './components/Row'
 import { Wrapper } from './components/Wrapper'
 import { AIRDROP_OPTIONS, AirdropOption } from './constants'
 import { usePreviewClaimableTokens } from './hooks/usePreviewClaimableTokens'
+
+import { V_COW } from '@cowprotocol/common-const'
+
+import { useVirtualTokenAirdropContract } from './hooks/useAirdropContract'
 
 import { HookDappContext } from '../../context'
 
@@ -34,31 +40,61 @@ export const PRE_AIRDROP: HookDappInternal = {
 
 export function AirdropHookApp() {
   const hookDappContext = useContext(HookDappContext)
-  const [hook, setHook] = useState<CowHook>({
-    target: 'test',
-    callData: 'test',
-    gasLimit: 'test',
-  })
+  const [gasLimit, setgasLimit] = useState<BigNumber | undefined>(undefined)
+
   const [selectedAirdrop, setSelectedAirdrop] = useState<AirdropOption>()
+  const VitrualTokenAirdorpContract = useVirtualTokenAirdropContract(selectedAirdrop?.addressesMapping)
   const { data: claimData, isLoading, error } = usePreviewClaimableTokens(selectedAirdrop)
   const [message, setMessage] = useState('')
   const { account } = useWalletInfo()
 
-  const clickOnAddHook = useCallback(() => {
-    const { callData, gasLimit, target } = hook
-    if (!hookDappContext || !callData || !gasLimit || !target) {
-      return
+  const VitrualTokenAirdorpContractInterface = VitrualTokenAirdorpContract?.interface
+
+  const callData = useMemo(() => {
+    if (!hookDappContext || !claimData) return
+    const args = [
+      claimData.index, //index
+      0, //claimType
+      hookDappContext.account, //claimant
+      claimData.amount, //claimableAmount
+      claimData.amount, //claimedAmount
+      claimData.proof, //merkleProof
+    ]
+
+    if (!VitrualTokenAirdorpContractInterface || !hookDappContext?.account) {
+      return null
     }
+
+    return VitrualTokenAirdorpContractInterface.encodeFunctionData('claim', args)
+  }, [VitrualTokenAirdorpContractInterface, hookDappContext])
+
+  useEffect(() => {
+    VitrualTokenAirdorpContract?.estimateGas
+      .claim(...args)
+      .then(setgasLimit)
+      .catch((e) => console.error('Error estimating gasLimit'))
+  }, [claimData])
+
+  const clickOnAddHook = useCallback(() => {
+    if (!hookDappContext || !callData || !gasLimit || !selectedAirdrop || !claimData) return
+
+    const hook = {
+      target: selectedAirdrop.addressesMapping[hookDappContext.chainId],
+      callData: callData,
+      gasLimit: gasLimit?.toString(),
+    }
+
+    const vcow = V_COW[hookDappContext.chainId]
 
     hookDappContext.addHook(
       {
         hook: hook,
         dapp: PRE_AIRDROP,
-        outputTokens: undefined,
+        outputTokens: [CurrencyAmount.fromRawAmount(vcow!, claimData.amount)], // -------- vcow!
       },
       true
     )
-  }, [hook, hookDappContext])
+  }, [hookDappContext, callData, gasLimit, hookDappContext])
 
   const canClaim = claimData?.amount && !claimData?.isClaimed
 
