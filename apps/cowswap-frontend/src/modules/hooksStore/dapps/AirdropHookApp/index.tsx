@@ -1,9 +1,8 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { formatTokenAmount } from '@cowprotocol/common-utils'
-import { CowHook, HookDappInternal, HookDappType } from '@cowprotocol/types'
+import { HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary } from '@cowprotocol/ui'
-import { useWalletInfo } from '@cowprotocol/wallet'
 import { Fraction } from '@uniswap/sdk-core'
 import { BigNumber } from '@ethersproject/bignumber'
 import { CurrencyAmount } from '@uniswap/sdk-core'
@@ -16,8 +15,6 @@ import { Row } from './components/Row'
 import { Wrapper } from './components/Wrapper'
 import { AIRDROP_OPTIONS, AirdropOption } from './constants'
 import { usePreviewClaimableTokens } from './hooks/usePreviewClaimableTokens'
-
-import { V_COW } from '@cowprotocol/common-const'
 
 import { useVirtualTokenAirdropContract } from './hooks/useAirdropContract'
 
@@ -43,58 +40,54 @@ export function AirdropHookApp() {
   const [gasLimit, setgasLimit] = useState<BigNumber | undefined>(undefined)
 
   const [selectedAirdrop, setSelectedAirdrop] = useState<AirdropOption>()
-  const VitrualTokenAirdorpContract = useVirtualTokenAirdropContract(selectedAirdrop?.addressesMapping)
+  const VitrualTokenAirdorpContract = useVirtualTokenAirdropContract(selectedAirdrop)
   const { data: claimData, isLoading, error } = usePreviewClaimableTokens(selectedAirdrop)
   const [message, setMessage] = useState('')
-  const { account } = useWalletInfo()
 
   const VitrualTokenAirdorpContractInterface = VitrualTokenAirdorpContract?.interface
 
   const callData = useMemo(() => {
-    if (!hookDappContext || !claimData) return
-    const args = [
+    if (!hookDappContext?.account || !claimData || !VitrualTokenAirdorpContractInterface) return
+    return VitrualTokenAirdorpContractInterface.encodeFunctionData('claim', [
       claimData.index, //index
       0, //claimType
       hookDappContext.account, //claimant
       claimData.amount, //claimableAmount
       claimData.amount, //claimedAmount
       claimData.proof, //merkleProof
-    ]
-
-    if (!VitrualTokenAirdorpContractInterface || !hookDappContext?.account) {
-      return null
-    }
-
-    return VitrualTokenAirdorpContractInterface.encodeFunctionData('claim', args)
-  }, [VitrualTokenAirdorpContractInterface, hookDappContext])
+    ])
+  }, [VitrualTokenAirdorpContractInterface, hookDappContext?.account, claimData])
 
   useEffect(() => {
+    if (!hookDappContext?.account || !claimData) return
     VitrualTokenAirdorpContract?.estimateGas
-      .claim(...args)
+      .claim(claimData.index, 0, hookDappContext.account, claimData.amount, claimData.amount, claimData.proof)
       .then(setgasLimit)
-      .catch((e) => console.error('Error estimating gasLimit'))
   }, [claimData])
 
   const clickOnAddHook = useCallback(() => {
     if (!hookDappContext || !callData || !gasLimit || !selectedAirdrop || !claimData) return
 
     const hook = {
-      target: selectedAirdrop.addressesMapping[hookDappContext.chainId],
+      target: selectedAirdrop.addressesMapping[hookDappContext.chainId].vToken.address,
       callData: callData,
       gasLimit: gasLimit?.toString(),
     }
-
-    const vcow = V_COW[hookDappContext.chainId]
 
     hookDappContext.addHook(
       {
         hook: hook,
         dapp: PRE_AIRDROP,
-        outputTokens: [CurrencyAmount.fromRawAmount(vcow!, claimData.amount)], // -------- vcow!
+        outputTokens: [
+          CurrencyAmount.fromRawAmount(
+            selectedAirdrop.addressesMapping[hookDappContext.chainId].token,
+            claimData.amount
+          ),
+        ],
       },
       true
     )
-  }, [hookDappContext, callData, gasLimit, hookDappContext])
+  }, [hookDappContext, callData, gasLimit])
 
   const canClaim = claimData?.amount && !claimData?.isClaimed
 
@@ -114,14 +107,14 @@ export function AirdropHookApp() {
         : `You have ${tokenAmount} tokens to claim`
       setMessage(newMessage)
     }
-    if (!account) {
+    if (!hookDappContext?.account) {
       setMessage('Please log in to check claimable tokens')
       return
     }
     if (!claimData?.amount) {
       setMessage("You don't have claimable tokens")
     }
-  }, [claimData, account, isLoading, error, selectedAirdrop])
+  }, [claimData, hookDappContext, isLoading, error, selectedAirdrop])
 
   return (
     <Wrapper>

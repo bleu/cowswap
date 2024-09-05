@@ -107,8 +107,8 @@ const fetchAddressIsEligible = async ({
 }
 
 export const usePreviewClaimableTokens = (selectedAirdrop?: AirdropOption) => {
-  const airdropContract = useVirtualTokenAirdropContract(selectedAirdrop?.addressesMapping)
   const { account } = useWalletInfo()
+  const airdropContract = useVirtualTokenAirdropContract(selectedAirdrop)
 
   const fetchPreviewClaimableTokens = async ({
     dataBaseUrl,

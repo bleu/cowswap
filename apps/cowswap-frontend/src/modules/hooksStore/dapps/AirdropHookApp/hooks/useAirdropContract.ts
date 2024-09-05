@@ -1,8 +1,12 @@
 import { VCow, vCowAbi } from '@cowprotocol/abis'
-import { SupportedChainId } from '@cowprotocol/cow-sdk'
+import { useWalletInfo } from '@cowprotocol/wallet'
 
 import { useContract } from 'common/hooks/useContract'
 
-export function useVirtualTokenAirdropContract(addressesMapping?: Record<SupportedChainId, string>): VCow | null {
-  return useContract<VCow>(addressesMapping, vCowAbi)
+import { AirdropOption } from '../constants'
+
+export function useVirtualTokenAirdropContract(airdropOption?: AirdropOption): VCow | null {
+  const { chainId } = useWalletInfo()
+  const vToken = airdropOption?.addressesMapping[chainId].vToken.address
+  return useContract<VCow>(vToken, vCowAbi)
 }
