@@ -4,26 +4,16 @@ import useSWR from 'swr'
 
 import { useVirtualTokenAirdropContract } from './useAirdropContract'
 
-import { AirdropOption } from '../constants'
+import { AirdropDataInfo, IClaimData, AirdropOption } from '../types'
+
+type IntervalsType = { [key: string]: string }
+
+type ChunkDataType = { [key: string]: AirdropDataInfo[] }
 
 export interface PreviewClaimableTokensParams {
   dataBaseUrl: string
   address: string
 }
-
-type IntervalsType = { [key: string]: string }
-
-export interface AirdropDataInfo {
-  index: number
-  type: string
-  amount: string
-  proof: string[]
-}
-export interface IClaimData extends AirdropDataInfo {
-  isClaimed: boolean
-}
-
-type ChunkDataType = { [key: string]: AirdropDataInfo[] }
 
 export const AIRDROP_PREVIEW_ERRORS = {
   NO_CLAIMABLE_TOKENS: "You don't have claimable tokens",

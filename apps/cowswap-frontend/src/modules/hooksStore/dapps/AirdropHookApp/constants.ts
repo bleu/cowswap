@@ -1,18 +1,7 @@
-import { COW, TokenWithLogo, V_COW } from '@cowprotocol/common-const'
+import { COW, V_COW } from '@cowprotocol/common-const'
 import { SupportedChainId } from '@cowprotocol/cow-sdk'
 
-export interface AirdropOption {
-  name: string
-  dataBaseUrl: string
-  decimals: number
-  addressesMapping: Record<
-    SupportedChainId,
-    {
-      vToken: TokenWithLogo
-      token: TokenWithLogo
-    }
-  >
-}
+import { AirdropOption } from './types'
 
 export const AIRDROP_OPTIONS = [
   {

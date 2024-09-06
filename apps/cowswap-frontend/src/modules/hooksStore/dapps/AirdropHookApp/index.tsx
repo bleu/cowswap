@@ -4,7 +4,6 @@ import { formatTokenAmount } from '@cowprotocol/common-utils'
 import { HookDappInternal, HookDappType } from '@cowprotocol/types'
 import { ButtonPrimary } from '@cowprotocol/ui'
 import { Fraction } from '@uniswap/sdk-core'
-import { BigNumber } from '@ethersproject/bignumber'
 import { CurrencyAmount } from '@uniswap/sdk-core'
 
 import { ContentWrapper } from './components/ContentWrapper'
@@ -13,12 +12,13 @@ import { Header } from './components/Header'
 import { Link } from './components/Link'
 import { Row } from './components/Row'
 import { Wrapper } from './components/Wrapper'
-import { AIRDROP_OPTIONS, AirdropOption } from './constants'
+import { AIRDROP_OPTIONS } from './constants'
 import { usePreviewClaimableTokens } from './hooks/usePreviewClaimableTokens'
 
-import { useVirtualTokenAirdropContract } from './hooks/useAirdropContract'
-
 import { HookDappContext } from '../../context'
+import { useAirdropHookCalls } from './hooks/useAirdropCalldata'
+import { AirdropOption } from './types'
+import { useCoWShedCreateHook } from 'modules/hooksStore/hooks/useCoWShed'
 
 const NAME = 'Airdrop'
 const DESCRIPTION = 'Claim an aidrop before swapping!'
@@ -37,42 +37,16 @@ export const PRE_AIRDROP: HookDappInternal = {
 
 export function AirdropHookApp() {
   const hookDappContext = useContext(HookDappContext)
-  const [gasLimit, setgasLimit] = useState<BigNumber | undefined>(undefined)
-
   const [selectedAirdrop, setSelectedAirdrop] = useState<AirdropOption>()
-  const VitrualTokenAirdorpContract = useVirtualTokenAirdropContract(selectedAirdrop)
   const { data: claimData, isLoading, error } = usePreviewClaimableTokens(selectedAirdrop)
+  const hooksCalls = useAirdropHookCalls(claimData, selectedAirdrop)
+  const cowShedCreateHook = useCoWShedCreateHook()
   const [message, setMessage] = useState('')
 
-  const VitrualTokenAirdorpContractInterface = VitrualTokenAirdorpContract?.interface
+  const clickOnAddHook = useCallback(async () => {
+    if (!hookDappContext || !hooksCalls || !claimData || !selectedAirdrop) return
 
-  const callData = useMemo(() => {
-    if (!hookDappContext?.account || !claimData || !VitrualTokenAirdorpContractInterface) return
-    return VitrualTokenAirdorpContractInterface.encodeFunctionData('claim', [
-      claimData.index, //index
-      0, //claimType
-      hookDappContext.account, //claimant
-      claimData.amount, //claimableAmount
-      claimData.amount, //claimedAmount
-      claimData.proof, //merkleProof
-    ])
-  }, [VitrualTokenAirdorpContractInterface, hookDappContext?.account, claimData])
-
-  useEffect(() => {
-    if (!hookDappContext?.account || !claimData) return
-    VitrualTokenAirdorpContract?.estimateGas
-      .claim(claimData.index, 0, hookDappContext.account, claimData.amount, claimData.amount, claimData.proof)
-      .then(setgasLimit)
-  }, [claimData])
-
-  const clickOnAddHook = useCallback(() => {
-    if (!hookDappContext || !callData || !gasLimit || !selectedAirdrop || !claimData) return
-
-    const hook = {
-      target: selectedAirdrop.addressesMapping[hookDappContext.chainId].vToken.address,
-      callData: callData,
-      gasLimit: gasLimit?.toString(),
-    }
+    const hook = await cowShedCreateHook(hooksCalls)
 
     hookDappContext.addHook(
       {
@@ -87,7 +61,7 @@ export function AirdropHookApp() {
       },
       true
     )
-  }, [hookDappContext, callData, gasLimit])
+  }, [hookDappContext, hooksCalls, claimData, selectedAirdrop])
 
   const canClaim = claimData?.amount && !claimData?.isClaimed
 
