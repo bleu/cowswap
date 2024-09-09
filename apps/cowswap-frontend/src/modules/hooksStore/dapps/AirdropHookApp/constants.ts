@@ -8,7 +8,7 @@ export const AIRDROP_OPTIONS = [
     name: 'COW',
     dataBaseUrl: 'https://raw.githubusercontent.com/bleu/cow-airdrop-token-mock/main/mock-airdrop-data/',
     addressesMapping: {
-      [SupportedChainId.SEPOLIA]: '0x665a921D720D27118ae4f9D1fA98976FEad04e5A', // TODO: replace with actual address
+      [SupportedChainId.SEPOLIA]: '0x326295729699096f7E4425fdC4CB7C4F1dd5e09a',
     },
     tokenMapping: {
       [SupportedChainId.SEPOLIA]: {
