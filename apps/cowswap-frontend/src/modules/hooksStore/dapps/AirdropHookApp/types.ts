@@ -9,7 +9,7 @@ export interface AirdropDataInfo {
 }
 export interface IClaimData extends AirdropDataInfo {
   isClaimed: boolean
-  contract: Airdrop // TODO: replace with actual contract
+  contract: Airdrop
   callData: string
   token: TokenWithLogo
 }
