@@ -4,7 +4,6 @@ import { SupportedChainId } from '@cowprotocol/cow-sdk'
 
 export interface AirdropDataInfo {
   index: number
-  type: string
   amount: string
   proof: string[]
 }
