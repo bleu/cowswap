@@ -4,14 +4,12 @@ import { ButtonPrimary } from '@cowprotocol/ui'
 
 import { useGasLimit } from 'modules/hooksStore/hooks/useGasLimitHooks'
 import { DropDownMenu } from 'modules/hooksStore/pure/DropDownMenu'
-import { ContentWrapper, Wrapper } from 'modules/hooksStore/styled'
+import { ContentWrapper, Wrapper, Row } from 'modules/hooksStore/styled'
 import { HookDappProps } from 'modules/hooksStore/types/hooks'
 
 import { AIRDROP_OPTIONS } from './constants'
 import { AIRDROP_PREVIEW_ERRORS, useClaimData } from './hooks/useClaimData'
-import { ClaimableAmountContainer } from './styled/ClaimableAmountContainer'
-import { LabelContainer } from './styled/LabelContainer'
-import { Row } from './styled/Row'
+import { ClaimableAmountContainer, LabelContainer, } from './styled'
 import { AirdropOption, IClaimData } from './types'
 
 export function AirdropHookApp({ context }: HookDappProps) {
