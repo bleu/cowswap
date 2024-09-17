@@ -1,18 +1,6 @@
-import { useState } from 'react'
-
-import ICON_CHECKMARK from '@cowprotocol/assets/cow-swap/checkmark.svg'
-import ICON_ARROW_DOWN from '@cowprotocol/assets/images/carret-down.svg'
 import { UI } from '@cowprotocol/ui'
 
-import SVG from 'react-inlinesvg'
 import styled from 'styled-components/macro'
-
-import { AirdropOption } from '../types'
-
-interface DropdownParams {
-  airdropOptions: AirdropOption[]
-  setSelectedAirdrop: (airdrop: AirdropOption) => void
-}
 
 export const Dropdown = styled.div`
   position: relative;
@@ -24,7 +12,8 @@ export const DropdownContent = styled.div`
   top: 0;
   left: 0;
   width: 100%;
-  min-height: 12rem;
+  border: 1px solid var(${UI.COLOR_BORDER});
+  border-radius: 12px;
   background-color: var(${UI.COLOR_PAPER});
   cursor: pointer;
   padding: 12px;
@@ -92,38 +81,3 @@ export const SelectButton = styled.div`
     }
   }
 `
-const dropdownInitialText = '-'
-
-export function DropDownMenu({ airdropOptions, setSelectedAirdrop }: DropdownParams) {
-  const [dropDownText, setDropDownText] = useState(dropdownInitialText)
-  const [showDropdown, setShowDropdown] = useState(false)
-
-  function handleSelectAirdrop(airdrop: AirdropOption) {
-    setSelectedAirdrop(airdrop)
-    setDropDownText(airdrop.name)
-    setShowDropdown(false)
-  }
-
-  return (
-    <Dropdown>
-      <DropdownButton onClick={() => setShowDropdown(!showDropdown)}>
-        {dropDownText}
-        <SVG src={ICON_ARROW_DOWN} />
-      </DropdownButton>
-      {showDropdown && (
-        <DropdownContent>
-          {airdropOptions.map((airdrop) => {
-            return (
-              <SelectButton onClick={() => handleSelectAirdrop(airdrop)}>
-                <div>
-                  <SVG src={ICON_CHECKMARK} />
-                  {airdrop.name}
-                </div>
-              </SelectButton>
-            )
-          })}
-        </DropdownContent>
-      )}
-    </Dropdown>
-  )
-}
