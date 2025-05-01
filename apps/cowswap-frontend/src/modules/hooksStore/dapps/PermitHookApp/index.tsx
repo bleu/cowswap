@@ -41,7 +41,13 @@ export function PermitHookApp({ context }: HookDappProps) {
       return
     }
 
-    context.addHook({ hook })
+    context.addHook({
+      hook: {
+        calls: [{ to: hook.target, callData: hook.callData }],
+        allowances: [],
+        gasLimit: hook.gasLimit,
+      },
+    })
   }, [generatePermitHook, context, permitInfo, token, spenderAddress, hookToEdit])
 
   const buttonProps = useMemo(() => {

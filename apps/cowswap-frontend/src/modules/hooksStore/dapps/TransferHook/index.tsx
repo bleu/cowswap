@@ -8,11 +8,9 @@ import { Erc20Abi } from '@cowprotocol/abis'
 import { mainnet, base } from 'viem/chains'
 
 import { CowShedHooks } from '@cowprotocol/cow-sdk'
-import { BaseTransaction, useCowShedSignature } from './useCowShedSignature'
 import { BigNumber } from 'ethers'
 
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers'
-import { useHandleTokenAllowance } from './useHandleTokenAllowance'
 import { useReadTokenContract } from './useReadTokenContract'
 import { useWalletProvider } from '@cowprotocol/common-hooks'
 
@@ -63,21 +61,6 @@ export function TransferHookApp({ context }: HookDappProps) {
     return cowShed.proxyOf(context.account)
   }, [context?.account, cowShed]) as Address | undefined
 
-  const cowShedSignature = useCowShedSignature({
-    cowShed,
-    signer,
-    context,
-  })
-
-  const handleTokenAllowance = useHandleTokenAllowance({
-    spender: cowShedProxy,
-    context,
-    web3Provider,
-    publicClient,
-    jsonRpcProvider,
-    signer,
-  })
-
   const onButtonClick = useCallback(async () => {
     if (!cowShed || !target || !gasLimit) return
 
@@ -96,36 +79,24 @@ export function TransferHookApp({ context }: HookDappProps) {
       args: [account, toAddress, amountBigint],
     })
 
-    const hookTx: BaseTransaction = {
-      to: target,
-      value: BigInt(0),
-      callData,
-    }
+    const calls = [
+      {
+        to: target,
+        callData,
+      },
+    ]
 
-    const permitTx = await handleTokenAllowance(BigNumber.from(amount), tokenAddress)
-
-    const permitTxAdjusted = permitTx
-      ? {
-          to: permitTx.target,
-          value: BigInt(0),
-          callData: permitTx.callData,
-        }
-      : undefined
-
-    const txs = permitTxAdjusted ? [permitTxAdjusted, hookTx] : [hookTx]
-
-    const cowShedCall = await cowShedSignature(txs)
-    if (!cowShedCall) throw new Error('Error signing hooks')
+    const allowances = [
+      {
+        tokenAddress,
+        amount,
+      },
+    ]
 
     const hook = {
-      target: cowShed.getFactoryAddress(),
-      callData: cowShedCall,
+      calls,
+      allowances,
       gasLimit,
-    }
-
-    if (hookToEdit) {
-      context.editHook({ hook, uuid: hookToEdit.uuid })
-      return
     }
 
     context.addHook({ hook })

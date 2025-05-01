@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'react'
 
-import { SigningScheme } from '@cowprotocol/contracts'
 import type { CowShedHooks, ICoWShedCall } from '@cowprotocol/cow-sdk'
-import { HookDappContext } from '@cowprotocol/hook-dapp-lib'
 
-import { stringToHex } from 'viem'
+import { Address, stringToHex } from 'viem'
+
+import { useOrderParams } from './useOrderParams'
 
 import type { Signer } from 'ethers'
+
+type OrderParams = ReturnType<typeof useOrderParams>
 
 export interface BaseTransaction {
   to: string
@@ -15,17 +17,17 @@ export interface BaseTransaction {
   isDelegateCall?: boolean
 }
 
-export function useHookDeadline({ context }: { context: HookDappContext | undefined }) {
+export function useHookDeadline({ orderParams }: { orderParams: OrderParams }) {
   return useMemo(() => {
     const now = new Date()
-    const validToOnTimezone = context?.orderParams?.validTo || 0
+    const validToOnTimezone = (orderParams && orderParams.validTo) || 0
     const validToTimestamp = validToOnTimezone + now.getTimezoneOffset() * 60
     const currentTimestamp = new Date().getTime() / 1000
     const oneHourAfter = Number(currentTimestamp.toFixed()) + 60 * 60
 
     if (validToTimestamp < oneHourAfter) return BigInt(oneHourAfter)
     return BigInt(validToTimestamp)
-  }, [context?.orderParams?.validTo])
+  }, [orderParams])
 }
 
 export function getCowShedNonce() {
@@ -35,17 +37,19 @@ export function getCowShedNonce() {
 export function useCowShedSignature({
   cowShed,
   signer,
-  context,
+  account,
+  orderParams,
 }: {
   cowShed: CowShedHooks | undefined
   signer: Signer | undefined
-  context: HookDappContext | undefined
+  account: Address | undefined
+  orderParams: OrderParams
 }) {
-  const hookDeadline = useHookDeadline({ context })
+  const hookDeadline = useHookDeadline({ orderParams })
 
   return useCallback(
     async (txs: BaseTransaction[]) => {
-      if (!cowShed || !signer || !context?.account) return
+      if (!cowShed || !signer || !account) return
       const cowShedCalls: ICoWShedCall[] = txs.map((tx) => {
         return {
           target: tx.to,
@@ -56,13 +60,10 @@ export function useCowShedSignature({
         }
       })
       const nonce = getCowShedNonce()
-      const signature = await cowShed
-        .signCalls(cowShedCalls, nonce, hookDeadline, signer, SigningScheme.EIP712)
-        .catch(() => {
-          throw new Error('User rejected signature')
-        })
-      return cowShed.encodeExecuteHooksForFactory(cowShedCalls, nonce, hookDeadline, context.account, signature)
+
+      const signature = '0x'
+      return cowShed.encodeExecuteHooksForFactory(cowShedCalls, nonce, hookDeadline, account, signature)
     },
-    [hookDeadline, cowShed, signer, context],
+    [hookDeadline, cowShed, signer, account],
   )
 }

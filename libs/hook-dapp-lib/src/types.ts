@@ -9,10 +9,28 @@ export interface CowHook {
   dappId: string
 }
 
+export interface CowHookCalls {
+  calls: {
+    to: string
+    callData: string
+  }[]
+  allowances: {
+    tokenAddress: string
+    amount: string
+  }[]
+  gasLimit: string
+  dappId: string
+}
+
 export interface HookDappConditions {
   position?: 'post' | 'pre'
   walletCompatibility?: HookDappWalletCompatibility[]
   supportedNetworks?: number[]
+}
+
+export interface CowHookCallsCreation {
+  hook: Omit<CowHookCalls, 'dappId'>
+  recipientOverride?: string
 }
 
 export interface CowHookCreation {
@@ -34,7 +52,7 @@ export interface CowHookToEdit extends CowHookCreation {
 }
 
 export interface CoWHookDappActions {
-  addHook(payload: CowHookCreation): void
+  addHook(payload: CowHookCallsCreation): void
   editHook(payload: CowHookToEdit): void
   setSellToken(token: TokenData): void
   setBuyToken(token: TokenData): void

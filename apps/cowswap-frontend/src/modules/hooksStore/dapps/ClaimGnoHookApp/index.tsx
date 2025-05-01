@@ -78,9 +78,9 @@ export function ClaimGnoHookApp({ context }: HookDappProps) {
     } else {
       context.addHook({
         hook: {
-          callData,
+          calls: [{ to: SBC_DEPOSIT_CONTRACT_ADDRESS, callData: callData }],
+          allowances: [],
           gasLimit: gasLimit.toString(),
-          target: SBC_DEPOSIT_CONTRACT_ADDRESS,
         },
       })
     }

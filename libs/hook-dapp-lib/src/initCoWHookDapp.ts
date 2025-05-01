@@ -1,7 +1,7 @@
 import { WidgetEthereumProvider } from '@cowprotocol/iframe-transport'
 
 import { CoWHookDappEvents, hookDappIframeTransport } from './hookDappIframeTransport'
-import { CowHookCreation, CoWHookDappActions, CowHookDetails, HookDappContext, TokenData } from './types'
+import { CowHookCallsCreation, CoWHookDappActions, CowHookDetails, HookDappContext, TokenData } from './types'
 
 interface CoWHookDappInit {
   onContext(context: HookDappContext): void
@@ -26,7 +26,7 @@ export function initCoWHookDapp({ onContext }: CoWHookDappInit): CoWHookDappHand
 
 function getCoWHookDappActions(): CoWHookDappActions {
   return {
-    addHook(payload: CowHookCreation) {
+    addHook(payload: CowHookCallsCreation) {
       hookDappIframeTransport.postMessageToWindow(parent, CoWHookDappEvents.ADD_HOOK, payload)
     },
     editHook(payload: CowHookDetails) {

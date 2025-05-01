@@ -1,11 +1,17 @@
 import { Erc20Abi } from '@cowprotocol/abis'
 import { BFF_BASE_URL } from '@cowprotocol/common-const'
-import { COW_PROTOCOL_SETTLEMENT_CONTRACT_ADDRESS, SupportedChainId } from '@cowprotocol/cow-sdk'
+import {
+  COW_PROTOCOL_SETTLEMENT_CONTRACT_ADDRESS,
+  COW_SHED_IMPLEMENTATION,
+  SupportedChainId,
+} from '@cowprotocol/cow-sdk'
 import { CowHookDetails } from '@cowprotocol/hook-dapp-lib'
 
 import { Interface } from 'ethers/lib/utils'
 
 import { CowHook } from 'modules/hooksStore/types/hooks'
+
+import { cowShedWithoutAuthorizationBytecode } from './cowShedWithoutAuthorizationBytecode'
 
 import { SimulationData, SimulationInput } from '../types'
 
@@ -65,6 +71,12 @@ export function getCoWHookTenderlySimulationInput(from: string, params: CowHook)
     input: params.callData,
     to: params.target,
     from,
+    //@ts-ignore
+    state_objects: {
+      [COW_SHED_IMPLEMENTATION.toLowerCase()]: {
+        code: cowShedWithoutAuthorizationBytecode,
+      },
+    },
   }
 }
 

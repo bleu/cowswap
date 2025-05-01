@@ -1,6 +1,6 @@
 import { IframeTransport } from '@cowprotocol/iframe-transport'
 
-import { CowHookCreation, CowHookDetails, HookDappContext, TokenData } from './types'
+import { CowHookCallsCreation, CowHookDetails, HookDappContext, TokenData } from './types'
 
 export enum CoWHookDappEvents {
   ACTIVATE = 'ACTIVATE',
@@ -14,7 +14,7 @@ export enum CoWHookDappEvents {
 export interface HookDappEventsPayloadMap {
   [CoWHookDappEvents.ACTIVATE]: void
   [CoWHookDappEvents.CONTEXT_UPDATE]: HookDappContext
-  [CoWHookDappEvents.ADD_HOOK]: CowHookCreation
+  [CoWHookDappEvents.ADD_HOOK]: CowHookCallsCreation
   [CoWHookDappEvents.EDIT_HOOK]: CowHookDetails
   [CoWHookDappEvents.SET_SELL_TOKEN]: TokenData
   [CoWHookDappEvents.SET_BUY_TOKEN]: TokenData

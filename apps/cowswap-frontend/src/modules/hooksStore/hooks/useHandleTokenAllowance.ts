@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 
 import { Erc20Abi } from '@cowprotocol/abis'
-import { HookDappContext } from '@cowprotocol/hook-dapp-lib'
 import {
   type GetTokenPermitIntoResult,
   type PermitInfo,
@@ -18,14 +17,16 @@ import { handleTokenApprove } from './useHandleTokenApprove'
 
 export function useHandleTokenAllowance({
   spender,
-  context,
+  account,
+  chainId,
   web3Provider,
   publicClient,
   jsonRpcProvider,
   signer,
 }: {
   spender: Address | undefined
-  context: HookDappContext
+  account: Address | undefined
+  chainId: number | undefined
   web3Provider: Web3Provider | undefined
   publicClient: PublicClient | undefined
   jsonRpcProvider: JsonRpcProvider | undefined
@@ -33,7 +34,7 @@ export function useHandleTokenAllowance({
 }) {
   return useCallback(
     async (amount: BigNumber, tokenAddress: Address) => {
-      if (!publicClient || !jsonRpcProvider || !context?.account || !spender || !web3Provider)
+      if (!publicClient || !jsonRpcProvider || !account || !chainId || !spender || !web3Provider)
         throw new Error('Missing context')
 
       const tokenContract = {
@@ -46,7 +47,7 @@ export function useHandleTokenAllowance({
           {
             ...tokenContract,
             functionName: 'allowance',
-            args: [context.account, spender],
+            args: [account, spender],
           },
           {
             ...tokenContract,
@@ -62,8 +63,6 @@ export function useHandleTokenAllowance({
         // amount is less than or equal to current allowance so no need to approve
         return
       }
-
-      const { chainId, account } = context
 
       const eip2162Utils = getPermitUtilsInstance(chainId, web3Provider, account)
 
@@ -103,7 +102,7 @@ export function useHandleTokenAllowance({
       if (!hook) throw new Error('User rejected permit')
       return hook
     },
-    [jsonRpcProvider, context, publicClient, spender, signer, web3Provider],
+    [jsonRpcProvider, account, chainId, publicClient, spender, signer, web3Provider],
   )
 }
 

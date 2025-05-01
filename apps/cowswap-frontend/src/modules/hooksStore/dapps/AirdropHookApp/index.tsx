@@ -33,8 +33,8 @@ export function AirdropHookApp({ context }: HookDappProps) {
     if (!context || !claimData || !gasLimit) return
     context.addHook({
       hook: {
-        target: claimData.contract.address,
-        callData: claimData.callData,
+        calls: [{ to: claimData.contract.address, callData: claimData.callData }],
+        allowances: [],
         gasLimit,
       },
     })
